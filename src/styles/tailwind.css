@@ -3,7 +3,7 @@
 
 @import 'tw-animate-css';
 
-/* CrypticOwl custom styles */
+/* The Cryptic Owl custom styles */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -20,10 +20,47 @@
 
 [role="tab"][data-state="inactive"] {
   color: #6D28D9;
-  background: white;
+}
+
+/* Dark mode Radix Tabs */
+.dark [role="tab"][data-state="inactive"] {
+  color: #C4B5FD;
+  background: transparent;
 }
 
 /* Smooth scroll */
 html {
   scroll-behavior: smooth;
+}
+
+/* Page transition */
+main {
+  animation: fadeInUp 0.3s ease both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark mode body */
+.dark body {
+  color-scheme: dark;
+}
+
+/* Selection color */
+::selection {
+  background: #7C3AED33;
+  color: #5B21B6;
+}
+
+.dark ::selection {
+  background: #A78BFA44;
+  color: #EDE9FE;
 }

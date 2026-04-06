@@ -1,10 +1,14 @@
 import { Outlet, NavLink, useLocation } from 'react-router';
-import { useState } from 'react';
-import { Menu, X, Flame, BookOpen, Puzzle, Home } from 'lucide-react';
+import { Menu, X, BookOpen, Puzzle as PuzzleNavIcon, Home, Sun, Moon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useDarkMode } from '../context/DarkModeContext';
+import { getTheme } from '../theme';
+import { useStreak } from '../hooks/useStreak';
 
 function OwlLogoMini() {
   return (
-    <svg viewBox="0 0 36 36" width="36" height="36" fill="none">
+    <svg viewBox="0 0 36 36" width="34" height="34" fill="none">
       <circle cx="18" cy="18" r="18" fill="#EDE9FE" />
       <ellipse cx="18" cy="20" rx="12" ry="13" fill="#C4B5FD" />
       <ellipse cx="18" cy="23" rx="7" ry="9" fill="#EDE9FE" />
@@ -28,24 +32,46 @@ function OwlLogoMini() {
 
 export function Root() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isDark, toggle: toggleDark } = useDarkMode();
+  const T = getTheme(isDark);
+  const { count: streak, refresh: refreshStreak } = useStreak();
   const location = useLocation();
+
+  // Close mobile menu and refresh streak on route change
+  useEffect(() => {
+    setMenuOpen(false);
+    refreshStreak();
+  }, [location.pathname]);
 
   const navLinks = [
     { to: '/', label: 'Home', icon: Home },
     { to: '/learn', label: 'Learn', icon: BookOpen },
-    { to: '/puzzle', label: 'Daily Puzzle', icon: Puzzle },
+    { to: '/puzzle', label: "Today's Puzzle", icon: PuzzleNavIcon },
   ];
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F5F0FF 0%, #FFF8F5 40%, #F0FDF9 100%)', fontFamily: "'Nunito', sans-serif" }}>
+    <div
+      className="min-h-screen transition-colors duration-300"
+      style={{ background: T.pageBg, fontFamily: "'Nunito', sans-serif" }}
+    >
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 backdrop-blur-md border-b border-[#EDE9FE]" style={{ background: 'rgba(255,255,255,0.85)' }}>
+      <nav
+        className="sticky top-0 z-50 backdrop-blur-md border-b transition-colors duration-300"
+        style={{ background: T.navBg, borderColor: T.navBorder }}
+      >
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
           <NavLink to="/" className="flex items-center gap-2.5 no-underline">
             <OwlLogoMini />
-            <span style={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.35rem', color: '#5B21B6', letterSpacing: '-0.01em' }}>
-              CrypticOwl
+            <span
+              style={{
+                fontFamily: "'Fredoka One', cursive",
+                fontSize: '1.25rem',
+                color: isDark ? '#C4B5FD' : '#5B21B6',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              The Cryptic Owl
             </span>
           </NavLink>
 
@@ -58,56 +84,166 @@ export function Root() {
                 end={to === '/'}
                 className={({ isActive }) =>
                   `px-4 py-2 rounded-full text-sm transition-all no-underline font-semibold ${
-                    isActive
-                      ? 'bg-[#7C3AED] text-white shadow-md'
-                      : 'text-[#6D28D9] hover:bg-[#F5F0FF]'
+                    isActive ? 'shadow-md' : ''
                   }`
                 }
-                style={{ fontFamily: "'Nunito', sans-serif" }}
+                style={({ isActive }) => ({
+                  background: isActive ? '#7C3AED' : 'transparent',
+                  color: isActive ? 'white' : isDark ? '#C4B5FD' : '#6D28D9',
+                  fontFamily: "'Nunito', sans-serif",
+                })}
               >
                 {label}
               </NavLink>
             ))}
           </div>
 
-          {/* Streak + Mobile Menu */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 bg-[#FFF7ED] border border-[#FED7AA] rounded-full px-3 py-1.5">
-              <span className="text-base">🔥</span>
-              <span style={{ fontFamily: "'Fredoka One', cursive", fontSize: '1rem', color: '#EA580C' }}>3</span>
-              <span style={{ fontSize: '0.72rem', color: '#C2410C', fontWeight: 600 }}>streak</span>
-            </div>
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden p-2 rounded-full hover:bg-[#F5F0FF] text-[#6D28D9] transition-colors"
+          {/* Right: Streak + Dark toggle + Mobile menu */}
+          <div className="flex items-center gap-2">
+            {/* Streak */}
+            <motion.div
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 border"
+              style={{
+                background: T.streakBg,
+                borderColor: T.streakBorder,
+              }}
+              whileHover={{ scale: 1.05 }}
             >
-              {menuOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
+              <span className="text-base">🔥</span>
+              <span
+                style={{
+                  fontFamily: "'Fredoka One', cursive",
+                  fontSize: '1rem',
+                  color: isDark ? '#FB923C' : '#EA580C',
+                }}
+              >
+                {streak}
+              </span>
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  color: isDark ? '#C2410C' : '#C2410C',
+                  fontWeight: 600,
+                }}
+              >
+                streak
+              </span>
+            </motion.div>
+
+            {/* Dark mode toggle */}
+            <motion.button
+              onClick={toggleDark}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="p-2 rounded-full border transition-colors duration-200"
+              style={{
+                background: isDark ? '#261845' : '#F5F0FF',
+                borderColor: isDark ? '#4C3580' : '#C4B5FD',
+                color: isDark ? '#C4B5FD' : '#7C3AED',
+              }}
+              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={isDark ? 'moon' : 'sun'}
+                  initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+                  animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                  exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex"
+                >
+                  {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                </motion.span>
+              </AnimatePresence>
+            </motion.button>
+
+            {/* Mobile hamburger */}
+            <motion.button
+              onClick={() => setMenuOpen(!menuOpen)}
+              whileTap={{ scale: 0.9 }}
+              className="md:hidden p-2 rounded-full transition-colors"
+              style={{
+                background: menuOpen ? (isDark ? '#261845' : '#F5F0FF') : 'transparent',
+                color: isDark ? '#C4B5FD' : '#6D28D9',
+              }}
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={menuOpen ? 'close' : 'open'}
+                  initial={{ rotate: -90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 90, opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="flex"
+                >
+                  {menuOpen ? <X size={20} /> : <Menu size={20} />}
+                </motion.span>
+              </AnimatePresence>
+            </motion.button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {menuOpen && (
-          <div className="md:hidden border-t border-[#EDE9FE] px-4 py-3 flex flex-col gap-1" style={{ background: 'rgba(255,255,255,0.95)' }}>
-            {navLinks.map(({ to, label, icon: Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={to === '/'}
-                onClick={() => setMenuOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-2xl text-sm no-underline font-semibold transition-all ${
-                    isActive ? 'bg-[#7C3AED] text-white' : 'text-[#6D28D9] hover:bg-[#F5F0FF]'
-                  }`
-                }
-                style={{ fontFamily: "'Nunito', sans-serif" }}
-              >
-                <Icon size={18} />
-                {label}
-              </NavLink>
-            ))}
-          </div>
-        )}
+        {/* Mobile Menu — animated */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+              className="md:hidden overflow-hidden border-t"
+              style={{ borderColor: T.navBorder, background: T.navBg }}
+            >
+              <div className="px-4 py-3 flex flex-col gap-1">
+                {navLinks.map(({ to, label, icon: Icon }, i) => (
+                  <motion.div
+                    key={to}
+                    initial={{ opacity: 0, x: -16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05, duration: 0.2 }}
+                  >
+                    <NavLink
+                      to={to}
+                      end={to === '/'}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm no-underline font-semibold transition-all"
+                      style={({ isActive }) => ({
+                        background: isActive ? '#7C3AED' : isDark ? '#261845' : '#F5F0FF',
+                        color: isActive ? 'white' : isDark ? '#C4B5FD' : '#6D28D9',
+                        fontFamily: "'Nunito', sans-serif",
+                        fontWeight: 700,
+                      })}
+                    >
+                      <Icon size={18} />
+                      {label}
+                    </NavLink>
+                  </motion.div>
+                ))}
+
+                {/* Dark mode toggle in mobile menu */}
+                <motion.div
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.15, duration: 0.2 }}
+                >
+                  <button
+                    onClick={() => { toggleDark(); setMenuOpen(false); }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold w-full transition-all"
+                    style={{
+                      background: isDark ? '#261845' : '#F5F0FF',
+                      color: isDark ? '#C4B5FD' : '#6D28D9',
+                      fontFamily: "'Nunito', sans-serif",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                    {isDark ? 'Light Mode' : 'Dark Mode'}
+                  </button>
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       <main>
