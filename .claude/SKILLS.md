@@ -282,57 +282,165 @@ Part color tokens live in `PART_STYLES` in `Puzzle.tsx`:
 
 ---
 
-## Auth System (Google OAuth)
+## Infrastructure & CI/CD
 
-**Library:** `@react-oauth/google`
+### AWS Architecture
+| Layer | Service | Purpose |
+|---|---|---|
+| Storage | S3 | Hosts the static `dist/` build output |
+| CDN | CloudFront | Global edge caching + HTTPS termination |
+| DNS | Route 53 | Domain → CloudFront alias record |
+| IAM | IAM | GitHub Actions deploy role (least-privilege) |
 
-**Env var:** `VITE_GOOGLE_CLIENT_ID` — must be set in `.env` (see `.env.example`). If missing, the History page shows a dev warning instead of the Google button.
+**S3 cache strategy** — Vite hashes asset filenames, so assets can be cached forever:
+- `dist/assets/**` → `Cache-Control: public,max-age=31536000,immutable`
+- `dist/index.html` + root files → `Cache-Control: no-cache,no-store,must-revalidate`
 
-**Provider setup in `App.tsx`:**
-```tsx
-<GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''}>
-  <DarkModeProvider>
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
-  </DarkModeProvider>
-</GoogleOAuthProvider>
+**CloudFront invalidation** — after every deploy, `aws cloudfront create-invalidation --paths "/*"` flushes the edge caches so users get the new `index.html` immediately.
+
+### GitHub Actions — `.github/workflows/deploy.yml`
+
+Two jobs:
+1. **`build`** — runs on every push + PR to `main`
+   - `npm ci` → `npm run typecheck` → `npm run build` (with Supabase env vars injected)
+   - Uploads `dist/` artifact only on pushes to main (not PRs)
+2. **`deploy`** — runs only on push to `main`, after `build` succeeds
+   - Downloads artifact → configures AWS credentials → S3 sync → CloudFront invalidation
+   - Tied to GitHub Environment `production` (can add manual approval gate there)
+
+**Concurrency group** cancels any in-progress run on the same branch, preventing stale deploys.
+
+**Required GitHub Secrets** (set in repo Settings → Secrets → Actions):
 ```
+VITE_SUPABASE_URL              # injected at build time
+VITE_SUPABASE_ANON_KEY         # injected at build time
+AWS_ACCESS_KEY_ID              # deploy-only, never in .env
+AWS_SECRET_ACCESS_KEY          # deploy-only, never in .env
+AWS_REGION                     # e.g. us-east-1
+S3_BUCKET_NAME                 # e.g. crypticowl-prod
+CLOUDFRONT_DISTRIBUTION_ID     # e.g. EXXXXXXXXX
+```
+
+**IAM permissions needed** for the deploy role:
+```json
+{
+  "s3:PutObject", "s3:DeleteObject", "s3:ListBucket",  // S3 sync
+  "cloudfront:CreateInvalidation"                       // cache bust
+}
+```
+
+### TypeScript
+No tsconfig.json existed originally (Vite strips types with esbuild). A `tsconfig.json` has been added with `strict: false` to avoid breaking existing code while still catching syntax errors.
+
+```bash
+npm run typecheck   # tsc --noEmit
+npm run build       # vite build (bundles, does NOT type-check)
+```
+
+---
+
+## Supabase
+
+### Database Tables
+
+| Table | Purpose | RLS |
+|---|---|---|
+| `puzzles` | Daily puzzle content | Public read, service-role write |
+| `user_stats` | Per-user aggregate (streak, XP, level) | Owner only |
+| `solve_history` | Individual solve records | Owner only |
+
+Migration file: `supabase/migrations/001_initial.sql` — run via `supabase db push` or paste into the SQL editor.
+
+### Supabase Client — `src/lib/supabase.ts`
+
+```tsx
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+```
+
+`isSupabaseConfigured` is `true` only when both env vars are set — use it to gate features:
+```tsx
+if (!isSupabaseConfigured) return <DevWarning />;
+```
+
+**Helper functions available:**
+```ts
+fetchPuzzleByDate(isoDate)        // today's puzzle
+fetchPuzzleArchive()              // all puzzles (archive page)
+fetchUserStats(userId)            // aggregate stats row
+upsertUserStats(userId, stats)    // create or update stats
+fetchSolveHistory(userId)         // all solve records, newest first
+insertSolveRecord(userId, record) // idempotent — ignores duplicates
+syncLocalStatsToSupabase(userId, local) // push localStorage → Supabase on first sign-in
+```
+
+All helpers return `null` / `[]` silently if Supabase is not configured or if the query fails — the UI always falls back to localStorage.
+
+### Env Vars
+
+```bash
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+```
+
+Set in `.env` for local dev. Set as GitHub Actions secrets for CI/CD (injected into `npm run build`). Never commit real credentials.
+
+---
+
+## Auth System (Google OAuth via Supabase)
+
+**Library:** `@supabase/supabase-js` — Supabase handles the full Google OAuth flow server-side. No Google Cloud Console setup needed directly in the app.
+
+**Provider setup:** No wrapper needed in `App.tsx` — Supabase auth is self-contained in `AuthProvider`.
 
 **Consuming auth:**
 ```tsx
 import { useAuth } from '../context/AuthContext';
 
-const { user, signIn, signOut, isSignedIn } = useAuth();
-// user: { name, email, picture, sub } | null
+const { user, session, isSignedIn, loading, signIn, signOut } = useAuth();
+// user: { id, name, email, picture } | null
+// loading: true while getSession() resolves on mount — check before rendering auth-gated UI
 ```
 
-**Rendering the Google sign-in button:**
+**Triggering Google sign-in:**
 ```tsx
-import { GoogleLogin } from '@react-oauth/google';
+// signIn() opens Google OAuth via Supabase redirect flow
+// redirectTo is set to window.location.origin so the user lands back on the same page
+const { signIn } = useAuth();
 
-<GoogleLogin
-  onSuccess={(response) => {
-    if (response.credential) signIn(response.credential);
-  }}
-  onError={() => {}}
-  theme={isDark ? 'filled_black' : 'outline'}
-  shape="pill"
-/>
+<button onClick={signIn}>Sign in with Google</button>
 ```
 
-**Auth flow:** `GoogleLogin` returns a JWT credential → `signIn()` decodes the payload with `atob()` → stores `GoogleUser` in `localStorage` key `'tco-user'`. No backend involved.
+**Sign-in button style** — use a white pill button with the inline `<GoogleIcon />` SVG, NOT a third-party component:
+```tsx
+<motion.button
+  onClick={signIn}
+  style={{ background: '#fff', color: '#3c4043', border: '1px solid #dadce0', borderRadius: '9999px' }}
+  whileHover={{ scale: 1.02 }}
+>
+  <GoogleIcon /> Sign in with Google
+</motion.button>
+```
+
+**Auth flow:** `signIn()` → `supabase.auth.signInWithOAuth({ provider: 'google' })` → Google → redirects back → `onAuthStateChange` fires → session stored by Supabase SDK automatically. On first sign-in, `syncLocalStatsToSupabase` pushes any localStorage progress.
+
+**`loading` state:** On mount, `AuthProvider` calls `supabase.auth.getSession()` asynchronously. While `loading === true`, don't render sign-in or sign-out UI — show a skeleton instead.
 
 **Gating content behind auth:**
 ```tsx
-const { isSignedIn } = useAuth();
+const { isSignedIn, loading } = useAuth();
+if (loading) return <LoadingSkeleton />;
 if (!isSignedIn) return <SignInGate isDark={isDark} />;
 // ... authenticated content
 ```
 
-**What requires auth:** History page (`/history`) — past puzzle archive + personal solve history + stats. Everything else (Home, Learn, Puzzle) is free without sign-in.
+**What requires auth:** History page (`/history`) — past puzzle archive + solve history + stats. Everything else (Home, Learn, Puzzle) is free.
 
 **Nav behaviour:** History link shows a `<Lock />` icon when not signed in. Desktop nav shows user avatar (links to `/history`) when signed in, or a "Sign in" pill button. Mobile menu shows sign-out row when signed in.
+
+**Supabase Dashboard setup:**
+1. Enable Google provider in Auth → Providers
+2. Add your Google OAuth Client ID + Secret (from Google Cloud Console)
+3. Add your site URL to Auth → URL Configuration → Redirect URLs
 
 ---
 
@@ -342,7 +450,7 @@ if (!isSignedIn) return <SignInGate isDark={isDark} />;
 |---|---|---|
 | `'tco-dark'` | `'true' \| 'false'` | Dark mode preference (defaults to `false` = light) |
 | `'tco-streak'` | JSON `StreakData` | XP, level, streak counts + solve history array |
-| `'tco-user'` | JSON `GoogleUser` | Signed-in user profile (name, email, picture, sub) |
+| `supabase.auth.*` | Managed by SDK | Session tokens — do not read/write manually |
 
 ---
 

@@ -7,6 +7,7 @@ import confetti from 'canvas-confetti';
 import { useDarkMode } from '../context/DarkModeContext';
 import { getTheme } from '../theme';
 import { useStreak, getXPForSolve, getLevelTitle, getLevelFromXP, hasSolvedToday } from '../hooks/useStreak';
+import { useAuth } from '../context/AuthContext';
 
 // ─── PUZZLE DATA ──────────────────────────────────────────────────────────────
 
@@ -297,6 +298,7 @@ function SuccessState({
   const runConfetti = useRef(false);
   const T = getTheme(isDark);
   const { count: streak, totalSolved, xp, level, recordSolve } = useStreak();
+  const { user } = useAuth();
   const xpEarned = getXPForSolve(hintsUsed);
   const [finalData, setFinalData] = useState<{ streak: number; total: number; xp: number; level: number } | null>(null);
 
@@ -305,7 +307,7 @@ function SuccessState({
       runConfetti.current = true;
 
       // Record the solve in streak
-      const result = recordSolve(hintsUsed, PUZZLE.number);
+      const result = recordSolve(hintsUsed, PUZZLE.number, user?.id);
       if (result) {
         setFinalData({ streak: result.count, total: result.totalSolved, xp: result.xp, level: result.level });
       }

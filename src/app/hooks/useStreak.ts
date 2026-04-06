@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
+import { upsertUserStats, insertSolveRecord } from '../../lib/supabase';
 
 export interface SolveRecord {
-  date: string;         // toDateString() format
+  date: string;
   puzzleNumber: number;
   hintsUsed: number;
   xpEarned: number;
@@ -19,12 +20,12 @@ export interface StreakData {
 
 const STORAGE_KEY = 'tco-streak';
 
-function getStoredData(): StreakData {
+/** Exported so AuthContext can read local data on sign-in for the sync. */
+export function getStoredStreakData(): StreakData {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Migrate older saves that don't have history
       return { history: [], ...parsed };
     }
   } catch {}
@@ -70,17 +71,26 @@ export function getLevelTitle(level: number): string {
 }
 
 export function hasSolvedToday(): boolean {
-  const data = getStoredData();
+  const data = getStoredStreakData();
   const today = new Date().toDateString();
   return data.lastSolved === today;
 }
 
 export function useStreak() {
-  const [data, setData] = useState<StreakData>(getStoredData);
+  const [data, setData] = useState<StreakData>(getStoredStreakData);
 
-  const recordSolve = useCallback((hintsUsed: number, puzzleNumber: number = 0) => {
+  /**
+   * Record a puzzle solve.
+   * - Always writes to localStorage immediately (works offline / without auth).
+   * - If userId is provided, fire-and-forget syncs to Supabase in the background.
+   */
+  const recordSolve = useCallback((
+    hintsUsed: number,
+    puzzleNumber: number = 0,
+    userId?: string
+  ) => {
     const today = new Date().toDateString();
-    const current = getStoredData();
+    const current = getStoredStreakData();
 
     if (current.lastSolved === today) return current;
 
@@ -108,11 +118,18 @@ export function useStreak() {
 
     saveData(newData);
     setData(newData);
+
+    // Sync to Supabase in the background — never blocks the UI
+    if (userId) {
+      upsertUserStats(userId, newData).catch(console.error);
+      insertSolveRecord(userId, { puzzleNumber, hintsUsed, xpEarned: xpGained }).catch(console.error);
+    }
+
     return newData;
   }, []);
 
   const refresh = useCallback(() => {
-    setData(getStoredData());
+    setData(getStoredStreakData());
   }, []);
 
   return { ...data, recordSolve, refresh };

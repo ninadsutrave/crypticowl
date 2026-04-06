@@ -1,78 +1,96 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import type { Session, User } from '@supabase/supabase-js';
+import { supabase, syncLocalStatsToSupabase } from '../../lib/supabase';
+import { getStoredStreakData } from '../hooks/useStreak';
 
-export interface GoogleUser {
+// ─── TYPES ────────────────────────────────────────────────────────────────────
+
+export interface AppUser {
+  id: string;
   name: string;
   email: string;
   picture: string;
-  sub: string;
 }
 
 interface AuthContextType {
-  user: GoogleUser | null;
-  signIn: (credential: string) => void;
-  signOut: () => void;
+  user: AppUser | null;
+  session: Session | null;
+  loading: boolean;
   isSignedIn: boolean;
+  signIn: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+
+function toAppUser(u: User): AppUser {
+  return {
+    id: u.id,
+    name: u.user_metadata?.full_name ?? u.user_metadata?.name ?? u.email ?? '',
+    email: u.email ?? '',
+    picture: u.user_metadata?.avatar_url ?? u.user_metadata?.picture ?? '',
+  };
+}
+
+// ─── CONTEXT ──────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  signIn: () => {},
-  signOut: () => {},
+  session: null,
+  loading: true,
   isSignedIn: false,
+  signIn: async () => {},
+  signOut: async () => {},
 });
 
-const AUTH_KEY = 'tco-user';
-
-function decodeJWTPayload(token: string): Record<string, string> | null {
-  try {
-    const payload = token.split('.')[1];
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(decoded);
-  } catch {
-    return null;
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<GoogleUser | null>(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const signIn = (credential: string) => {
-    const payload = decodeJWTPayload(credential);
-    if (!payload) return;
-    const u: GoogleUser = {
-      name: payload.name ?? '',
-      email: payload.email ?? '',
-      picture: payload.picture ?? '',
-      sub: payload.sub ?? '',
-    };
-    setUser(u);
-    try {
-      localStorage.setItem(AUTH_KEY, JSON.stringify(u));
-    } catch {}
+  useEffect(() => {
+    // Restore existing session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    // Keep session in sync with Supabase auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+
+        // On first sign-in, push any local progress to Supabase
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+          const localData = getStoredStreakData();
+          await syncLocalStatsToSupabase(session.user.id, localData);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signIn = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'select_account',
+        },
+      },
+    });
   };
 
-  const signOut = () => {
-    setUser(null);
-    try {
-      localStorage.removeItem(AUTH_KEY);
-    } catch {}
+  const signOut = async () => {
+    await supabase.auth.signOut();
   };
+
+  const user = session?.user ? toAppUser(session.user) : null;
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signOut, isSignedIn: user !== null }}>
+    <AuthContext.Provider value={{ user, session, loading, isSignedIn: !!session, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
