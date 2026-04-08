@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mascot } from '../components/Mascot';
 import { Search, ChevronRight } from 'lucide-react';
@@ -695,7 +695,7 @@ const { isDark } = useDarkMode();
                         borderColor: t.border,
                         background: 'transparent',
                         color: t.color,
-                      } as any}
+                      } as React.CSSProperties}
                     >
                       {t.emoji} {t.label}
                     </Tabs.Trigger>

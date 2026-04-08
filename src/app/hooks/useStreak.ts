@@ -28,14 +28,14 @@ export function getStoredStreakData(): StreakData {
       const parsed = JSON.parse(stored);
       return { history: [], ...parsed };
     }
-  } catch {}
+  } catch { /* localStorage unavailable */ }
   return { count: 0, lastSolved: null, totalSolved: 0, xp: 0, level: 1, bestStreak: 0, history: [] };
 }
 
 function saveData(data: StreakData) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {}
+  } catch { /* localStorage unavailable */ }
 }
 
 export function getXPForSolve(hintsUsed: number): number {

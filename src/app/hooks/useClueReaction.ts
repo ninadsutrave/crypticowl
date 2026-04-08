@@ -22,7 +22,7 @@ function persistReaction(puzzleNumber: number, reaction: Reaction) {
   }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-  } catch {}
+  } catch { /* localStorage unavailable */ }
 }
 
 /**

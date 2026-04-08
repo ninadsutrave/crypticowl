@@ -57,6 +57,8 @@ export function Root() {
     setMenuOpen(false);
     setAvatarDropdown(false);
     refreshStreak();
+    // refreshStreak identity is stable across renders; location.pathname is the only trigger
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   const navLinks = [

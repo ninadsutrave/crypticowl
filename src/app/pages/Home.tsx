@@ -653,7 +653,7 @@ function LeaderboardTeaser({ isDark }: { isDark: boolean }) {
 
 // ─── BOTTOM CTA ───────────────────────────────────────────────────────────────
 
-function BottomCTA({ onNavigate, isDark }: { onNavigate: () => void; isDark: boolean }) {
+function BottomCTA({ onNavigate, isDark: _isDark }: { onNavigate: () => void; isDark: boolean }) {
   return (
     <div className="relative z-10 px-4 pb-16">
       <div className="max-w-2xl mx-auto">

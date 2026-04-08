@@ -4,11 +4,10 @@ import { Mascot, MascotMood } from '../components/Mascot';
 import { Lightbulb, Send, RotateCcw, Copy, Check, ChevronDown, Share2, Timer, Zap, ThumbsUp, ThumbsDown, ExternalLink } from 'lucide-react';
 import { useParams } from 'react-router';
 import { useClueReaction } from '../hooks/useClueReaction';
-// @ts-ignore
 import confetti from 'canvas-confetti';
 import { useDarkMode } from '../context/DarkModeContext';
 import { getTheme } from '../theme';
-import { useStreak, getXPForSolve, getLevelTitle, getLevelFromXP, hasSolvedToday } from '../hooks/useStreak';
+import { useStreak, getXPForSolve, getLevelTitle, hasSolvedToday } from '../hooks/useStreak';
 import { useAuth } from '../context/AuthContext';
 import { fetchPuzzleByDate, fetchPuzzleByNumber, type DbDailyPuzzle, type PuzzleHint } from '../../lib/supabase';
 
@@ -449,6 +448,7 @@ function SuccessState({
       };
       frame();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const displayData = finalData || { streak, total: totalSolved, xp, level };
@@ -904,8 +904,7 @@ function WrongFeedback({
 
 // ─── ALREADY SOLVED BANNER ���───────────────────────────────────────────────────
 
-function AlreadySolvedBanner({ isDark, onSolvePractice }: { isDark: boolean; onSolvePractice: () => void }) {
-  const T = getTheme(isDark);
+function AlreadySolvedBanner({ isDark, onSolvePractice: _onSolvePractice }: { isDark: boolean; onSolvePractice: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}
@@ -993,7 +992,7 @@ export function Puzzle() {
       else setArchiveNotFound(true);
       setArchiveLoading(false);
     });
-  }, [requestedNumber]);
+  }, [requestedNumber, isArchive]);
 
   // The puzzle to play: archive puzzle (if loaded) or today's hardcoded puzzle
   const activePuzzle: ActivePuzzle = archivePuzzle ?? DEFAULT_PUZZLE;

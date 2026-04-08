@@ -561,7 +561,7 @@ export function History() {
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn, user?.id]);
+  }, [isSignedIn, user]);
 
   useEffect(() => {
     loadData();

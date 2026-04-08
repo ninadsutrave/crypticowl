@@ -189,6 +189,7 @@ export function Mascot({
 
       <motion.div
         style={{ width: size, height: size }}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         animate={bounceAnimation as any}
         className="flex-shrink-0"
       >
