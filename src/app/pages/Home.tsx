@@ -498,7 +498,7 @@ function WordplayPreview({ onNavigate, isDark }: { onNavigate: () => void; isDar
   const T = getTheme(isDark);
   const topics = [
     { icon: '🔀', title: 'Anagram', color: '#A78BFA', bg: '#F5F0FF', dbg: '#1A0F35', desc: 'Letters scrambled to form a new word' },
-    { icon: '🫙', title: 'Container', color: '#34D399', bg: '#ECFDF5', dbg: '#062015', desc: 'One word hidden inside another' },
+    { icon: '📝', title: 'Double Def', color: '#34D399', bg: '#ECFDF5', dbg: '#062015', desc: 'Two separate definitions, one answer' },
     { icon: '🔄', title: 'Reversal', color: '#38BDF8', bg: '#F0F9FF', dbg: '#021520', desc: 'Read a word backwards for the answer' },
     { icon: '🎙️', title: 'Homophone', color: '#FB923C', bg: '#FFF7ED', dbg: '#1A0A00', desc: 'The answer sounds like another word' },
     { icon: '👻', title: 'Hidden Word', color: '#F472B6', bg: '#FDF2F8', dbg: '#1F0818', desc: 'Answer concealed within the clue' },

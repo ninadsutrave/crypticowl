@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mascot } from '../components/Mascot';
-import { Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, ChevronRight } from 'lucide-react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useDarkMode } from '../context/DarkModeContext';
 import { getTheme } from '../theme';
@@ -11,11 +11,11 @@ import { getTheme } from '../theme';
 type CluePartKey = 'fodder' | 'indicator' | 'definition' | null;
 
 const CLUE_SEGMENTS = [
-  { key: 'fodder', text: 'Pears' },
+  { key: 'fodder', text: 'Stone' },
   { key: null, text: ' ' },
-  { key: 'indicator', text: 'mixed up' },
-  { key: null, text: ' to form ' },
-  { key: 'definition', text: 'a weapon' },
+  { key: 'indicator', text: 'broken' },
+  { key: null, text: ', becomes ' },
+  { key: 'definition', text: 'musical sounds' },
   { key: null, text: ' (5)' },
 ] as { key: CluePartKey; text: string }[];
 
@@ -146,16 +146,17 @@ const WORDPLAY_TYPES = [
     bg: '#F5F0FF',
     bgDark: '#1A0F35',
     border: '#A78BFA',
-    desc: "Letters are rearranged (scrambled) to spell the answer. An 'indicator' word signals this.",
-    clue: '"Pears mixed up to form a weapon (5)"',
+    desc: "Letters are rearranged (scrambled) to spell the answer. An indicator word signals this — look for words suggesting disorder or change.",
+    clue: '"Stone broken becomes musical sounds (5)"',
     breakdown: [
-      { label: 'Definition', text: 'a weapon', color: PART_COLORS.definition },
-      { label: 'Indicator', text: 'mixed up', color: PART_COLORS.indicator },
-      { label: 'Fodder', text: 'PEARS', color: PART_COLORS.fodder },
+      { label: 'Definition', text: 'musical sounds', color: PART_COLORS.definition },
+      { label: 'Indicator', text: 'broken', color: PART_COLORS.indicator },
+      { label: 'Fodder', text: 'STONE', color: PART_COLORS.fodder },
     ],
-    answer: 'SPEAR',
-    visual: ['P', 'E', 'A', 'R', 'S'],
-    visualAnswer: ['S', 'P', 'E', 'A', 'R'],
+    answer: 'TONES',
+    visual: ['S', 'T', 'O', 'N', 'E'],
+    visualAnswer: ['T', 'O', 'N', 'E', 'S'],
+    indicators: ['mixed', 'wild', 'broken', 'scrambled', 'confused', 'jumbled', 'crazy', 'arranged', 'upset', 'strangely', 'chaotic', 'messy', 'muddled'],
   },
   {
     id: 'hidden',
@@ -165,7 +166,7 @@ const WORDPLAY_TYPES = [
     bg: '#FDF2F8',
     bgDark: '#200818',
     border: '#F472B6',
-    desc: 'The answer is literally hidden inside consecutive letters of the clue. Look carefully!',
+    desc: "The answer is literally hiding inside consecutive letters of the clue text — no manipulation needed, just find the hidden letters.",
     clue: '"Oscar hides his vehicle (3)"',
     breakdown: [
       { label: 'Definition', text: 'his vehicle', color: PART_COLORS.definition },
@@ -175,25 +176,26 @@ const WORDPLAY_TYPES = [
     answer: 'CAR',
     visual: ['o', 's', 'C', 'A', 'R'],
     visualAnswer: ['C', 'A', 'R'],
+    indicators: ['in', 'within', 'hiding in', 'part of', 'some of', 'found in', 'held by', 'contains', 'inside', 'concealed in', 'buried in'],
   },
   {
-    id: 'container',
-    label: 'Container',
-    emoji: '🫙',
+    id: 'double_def',
+    label: 'Double Def',
+    emoji: '📝',
     color: '#059669',
     bg: '#ECFDF5',
     bgDark: '#062010',
     border: '#34D399',
-    desc: "One word is placed inside another. Look for words like 'holds', 'contains', 'surrounding'.",
-    clue: '"Shell hides a dark place inside (5)"',
+    desc: "The clue gives two completely separate definitions of the same answer — no wordplay at all. Both halves independently clue the exact same word.",
+    clue: '"Match: game or fire-lighter (5)"',
     breakdown: [
-      { label: 'Definition', text: 'Shell', color: PART_COLORS.definition },
-      { label: 'Indicator', text: 'hides ... inside', color: PART_COLORS.indicator },
-      { label: 'Contents', text: 'HELL inside S_L', color: PART_COLORS.fodder },
+      { label: 'Definition 1', text: 'game', color: PART_COLORS.definition },
+      { label: 'Definition 2', text: 'fire-lighter', color: PART_COLORS.indicator },
     ],
-    answer: 'SHELL',
-    visual: ['S', 'H', 'E', 'L', 'L'],
-    visualAnswer: ['S', '{HELL}'],
+    answer: 'MATCH',
+    visual: ['M', 'A', 'T', 'C', 'H'],
+    visualAnswer: ['M', 'A', 'T', 'C', 'H'],
+    indicators: [],  // no indicator words — the trick is spotting the two definitions
   },
   {
     id: 'reversal',
@@ -203,7 +205,7 @@ const WORDPLAY_TYPES = [
     bg: '#F0F9FF',
     bgDark: '#021520',
     border: '#38BDF8',
-    desc: "Read a word backwards to get the answer. Indicators include 'back', 'returned', 'reversed'.",
+    desc: "Read a word backwards to get the answer. Indicator words suggest going back or returning.",
     clue: '"The devil, going back, has lived (5)"',
     breakdown: [
       { label: 'Definition', text: 'has lived', color: PART_COLORS.definition },
@@ -213,6 +215,7 @@ const WORDPLAY_TYPES = [
     answer: 'LIVED',
     visual: ['D', 'E', 'V', 'I', 'L'],
     visualAnswer: ['L', 'I', 'V', 'E', 'D'],
+    indicators: ['back', 'returned', 'reversed', 'going up', 'over', 'reflected', 'about-face', 'backwards', 'retiring', 'coming back', 'east to west'],
   },
   {
     id: 'deletion',
@@ -222,7 +225,7 @@ const WORDPLAY_TYPES = [
     bg: '#FFFBEB',
     bgDark: '#1A1000',
     border: '#FBBF24',
-    desc: "Remove a letter (usually the first or last) from a word. 'Headless' = remove first letter.",
+    desc: "Remove a letter from a word — usually the first ('headless') or last ('tailless'). The leftover letters give the answer.",
     clue: '"Ghost without its head hosts a party (4)"',
     breakdown: [
       { label: 'Definition', text: 'hosts a party', color: PART_COLORS.definition },
@@ -232,6 +235,7 @@ const WORDPLAY_TYPES = [
     answer: 'HOST',
     visual: ['G', 'H', 'O', 'S', 'T'],
     visualAnswer: ['H', 'O', 'S', 'T'],
+    indicators: ['headless', 'tailless', 'heartless', 'losing', 'without', 'cut', 'almost', 'most of', 'beheaded', 'endless', 'topless', 'gutted'],
   },
   {
     id: 'homophone',
@@ -241,7 +245,7 @@ const WORDPLAY_TYPES = [
     bg: '#FFF7ED',
     bgDark: '#1A0A00',
     border: '#FB923C',
-    desc: "The answer sounds like another word. Look for 'sounds like', 'we hear', 'reportedly'.",
+    desc: "The answer sounds like another word when spoken aloud. The indicator always references hearing or speaking.",
     clue: '"We hear the rain rule (5)"',
     breakdown: [
       { label: 'Definition', text: 'rule', color: PART_COLORS.definition },
@@ -251,6 +255,7 @@ const WORDPLAY_TYPES = [
     answer: 'REIGN',
     visual: ['R', 'A', 'I', 'N'],
     visualAnswer: ['R', 'E', 'I', 'G', 'N'],
+    indicators: ['sounds like', 'we hear', 'reportedly', 'audibly', 'spoken', 'say', 'aloud', 'on the radio', 'in speech', 'to the ear'],
   },
 ];
 
@@ -350,19 +355,111 @@ function WordplayTab({ type, isDark }: { type: (typeof WORDPLAY_TYPES)[0]; isDar
           </div>
         </div>
       </div>
+
+      {type.indicators && type.indicators.length > 0 && (
+        <div
+          className="rounded-2xl p-4 border"
+          style={{ background: isDark ? type.bgDark : type.bg, borderColor: type.border }}
+        >
+          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: type.color, marginBottom: 8, fontFamily: "'Nunito', sans-serif", textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Common indicator words
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {type.indicators.map((w, i) => (
+              <span
+                key={i}
+                className="px-3 py-1 rounded-full text-sm font-semibold"
+                style={{
+                  background: isDark ? '#00000030' : '#ffffff60',
+                  color: type.color,
+                  border: `1.5px solid ${type.border}`,
+                  fontFamily: "'Nunito', sans-serif",
+                }}
+              >
+                {w}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── INDICATORS ───────────────────────────────────────────────────────────────
 
-const INDICATORS = [
-  { type: 'Anagram', color: '#7C3AED', bg: '#F5F0FF', bgDark: '#1A0F35', border: '#A78BFA', emoji: '🔀', words: ['mixed', 'wild', 'broken', 'scrambled', 'confused', 'jumbled', 'crazy', 'arranged', 'upset', 'strangely', 'oddly'] },
-  { type: 'Reversal', color: '#0284C7', bg: '#F0F9FF', bgDark: '#021520', border: '#38BDF8', emoji: '🔄', words: ['back', 'returned', 'reversed', 'going up', 'east to west', 'over', 'reflected', 'about-face'] },
-  { type: 'Hidden', color: '#DB2777', bg: '#FDF2F8', bgDark: '#200818', border: '#F472B6', emoji: '👻', words: ['in', 'within', 'hiding in', 'part of', 'some of', 'found in', 'held by', 'contains'] },
-  { type: 'Container', color: '#059669', bg: '#ECFDF5', bgDark: '#062010', border: '#34D399', emoji: '🫙', words: ['holds', 'contains', 'around', 'surrounding', 'inside', 'sheltering', 'embracing', 'swallowing'] },
-  { type: 'Deletion', color: '#B45309', bg: '#FFFBEB', bgDark: '#1A1000', border: '#FBBF24', emoji: '✂️', words: ['headless', 'tailless', 'heartless', 'losing', 'without', 'cut', 'almost', 'most of'] },
-  { type: 'Homophone', color: '#EA580C', bg: '#FFF7ED', bgDark: '#1A0A00', border: '#FB923C', emoji: '🎙️', words: ['sounds like', 'we hear', 'reportedly', 'audibly', 'spoken', 'say', 'aloud', 'on the radio'] },
+// ─── COMPOUND CLUES ───────────────────────────────────────────────────────────
+
+const COMPOUND_EXAMPLES = [
+  {
+    title: 'Charade',
+    subtitle: 'Two abbreviations join end-to-end',
+    emoji: '🔗',
+    mechanisms: ['Abbreviation', 'Direct'],
+    clue: '"Doctor on the sick list makes a boring tool (5)"',
+    steps: [
+      { text: 'Doctor → DR  (standard abbreviation)', type: 'indicator' as const },
+      { text: 'Sick → ILL  (direct synonym)', type: 'fodder' as const },
+      { text: 'DR + ILL = DRILL', type: 'definition' as const },
+    ],
+    answer: 'DRILL',
+    tip: 'In a charade, there\'s no single indicator word — each component points to itself.',
+  },
+  {
+    title: 'Charade',
+    subtitle: 'Direction abbreviation + animal synonym',
+    emoji: '🔗',
+    mechanisms: ['Direction', 'Synonym'],
+    clue: '"Compass point before a great ape gives the back of the neck (4)"',
+    steps: [
+      { text: 'Compass point → N  (North)', type: 'indicator' as const },
+      { text: 'Great ape → APE', type: 'fodder' as const },
+      { text: 'N + APE = NAPE', type: 'definition' as const },
+    ],
+    answer: 'NAPE',
+    tip: 'Compass points (N, S, E, W) are among the most common building blocks in cryptics.',
+  },
+  {
+    title: 'Deletion + Reversal',
+    subtitle: 'Remove a letter, then read backwards',
+    emoji: '✂️🔄',
+    mechanisms: ['Deletion', 'Reversal'],
+    clue: '"Star without its head, turned around, is a rodent (3)"',
+    steps: [
+      { text: 'Word: STAR', type: 'fodder' as const },
+      { text: '"Without its head" → remove S → TAR', type: 'indicator' as const },
+      { text: '"Turned around" → reverse TAR → RAT ✓', type: 'definition' as const },
+    ],
+    answer: 'RAT',
+    tip: 'Each indicator word does a separate job — "without its head" deletes, "turned around" reverses. Apply them in reading order.',
+  },
+  {
+    title: 'Deletion + Anagram',
+    subtitle: 'Trim the word, then scramble what\'s left',
+    emoji: '✂️🔀',
+    mechanisms: ['Deletion', 'Anagram'],
+    clue: '"Mostly earns, scrambled, means close (4)"',
+    steps: [
+      { text: 'Word: EARNS', type: 'fodder' as const },
+      { text: '"Mostly" → remove last letter S → EARN', type: 'indicator' as const },
+      { text: '"Scrambled" → anagram EARN → NEAR ✓', type: 'definition' as const },
+    ],
+    answer: 'NEAR',
+    tip: '"Mostly" quietly removes the last letter. Then "scrambled" signals the anagram. Watch for these quiet deletion words.',
+  },
+  {
+    title: 'Reversal + Hidden',
+    subtitle: 'Reverse the source word, then find what\'s inside',
+    emoji: '🔄👻',
+    mechanisms: ['Reversal', 'Hidden'],
+    clue: '"Backwards in \'reward\' lies an equal contest (4)"',
+    steps: [
+      { text: '"Backwards" → reverse REWARD → DRAWER', type: 'indicator' as const },
+      { text: '"In" → look for hidden word inside DRAWER', type: 'fodder' as const },
+      { text: 'D-R-A-W-e-r → DRAW = a tied game ✓', type: 'definition' as const },
+    ],
+    answer: 'DRAW',
+    tip: 'The two indicators work in order: first reverse, then extract the hidden word from the result.',
+  },
 ];
 
 // ─── SYNONYMS ─────────────────────────────────────────────────────────────────
@@ -396,13 +493,12 @@ const SYNONYMS = [
 
 // ─── MAIN LEARN PAGE ──────────────────────────────────────────────────────────
 
-const SECTIONS = ['Intro', 'Parts', 'Wordplay', 'Indicators', 'Synonyms'];
+const SECTIONS = ['Intro', 'Parts', 'Wordplay', 'Compound', 'Synonyms'];
 
 export function Learn() {
   const [activeSection, setActiveSection] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedAccordion, setExpandedAccordion] = useState<number | null>(null);
-  const { isDark } = useDarkMode();
+const { isDark } = useDarkMode();
   const T = getTheme(isDark);
 
   const filteredSynonyms = SYNONYMS.filter(
@@ -500,22 +596,24 @@ export function Learn() {
                   style={{ background: isDark ? '#261845' : '#F9F7FF', border: `2px dashed ${isDark ? '#4C3580' : '#C4B5FD'}` }}
                 >
                   <p style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: '1.05rem', color: T.text, textAlign: 'center' }}>
-                    "Pears{' '}
-                    <span style={{ background: isDark ? '#1A0F35' : '#F5F3FF', color: '#5B21B6', border: '1.5px solid #7C3AED', borderRadius: 6, padding: '1px 5px' }}>
-                      mixed up
+                    <span style={{ background: isDark ? '#2A1505' : '#FFF7ED', color: '#C2410C', border: '1.5px solid #F97316', borderRadius: 6, padding: '1px 5px' }}>
+                      Stone
                     </span>{' '}
-                    to form{' '}
+                    <span style={{ background: isDark ? '#1A0F35' : '#F5F3FF', color: '#5B21B6', border: '1.5px solid #7C3AED', borderRadius: 6, padding: '1px 5px' }}>
+                      broken
+                    </span>
+                    {', becomes '}
                     <span style={{ background: isDark ? '#0D1F35' : '#EFF6FF', color: '#1D4ED8', border: '1.5px solid #3B82F6', borderRadius: 6, padding: '1px 5px' }}>
-                      a weapon
+                      musical sounds
                     </span>{' '}
                     (5)"
                   </p>
                 </div>
                 <div className="space-y-2">
                   {[
-                    { dot: '#3B82F6', text: '"a weapon" is the definition (= SPEAR)' },
-                    { dot: '#7C3AED', text: '"mixed up" tells you to make an anagram' },
-                    { dot: '#F97316', text: '"Pears" is the fodder — rearrange its letters → SPEAR!' },
+                    { dot: '#3B82F6', text: '"musical sounds" is the definition (= TONES)' },
+                    { dot: '#7C3AED', text: '"broken" tells you to make an anagram' },
+                    { dot: '#F97316', text: '"Stone" is the fodder — rearrange its letters → TONES!' },
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-3">
                       <div className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0" style={{ background: item.dot }} />
@@ -615,79 +713,105 @@ export function Learn() {
                 className="w-full py-3 rounded-2xl flex items-center justify-center gap-2 transition-all hover:opacity-90"
                 style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', color: 'white', fontFamily: "'Nunito', sans-serif", fontWeight: 800 }}
               >
-                See Common Indicators <ChevronRight size={16} />
+                Compound Clues <ChevronRight size={16} />
               </button>
             </div>
           )}
 
-          {/* ── SECTION 3: Indicators ── */}
+          {/* ── SECTION 3: Compound Clues ── */}
           {activeSection === 3 && (
             <div className="space-y-6">
               <div>
                 <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.5rem', color: isDark ? '#C4B5FD' : '#1E1B4B', marginBottom: 4 }}>
-                  Common Indicators 🚦
+                  Compound Clues 🧬
                 </h2>
                 <p style={{ fontSize: '0.9rem', color: T.textMuted, fontWeight: 600, marginBottom: 0 }}>
-                  These are the "signal words" that tell you what type of wordplay to use.
+                  Real puzzles often mix two or more tricks in a single clue. Here are 5 examples showing how they combine.
                 </p>
               </div>
 
-              {INDICATORS.map((group, gi) => (
-                <div
-                  key={gi}
-                  className="rounded-3xl overflow-hidden border shadow-sm"
+              {COMPOUND_EXAMPLES.map((ex, ei) => (
+                <motion.div
+                  key={ei}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: ei * 0.07 }}
+                  className="rounded-3xl border shadow-sm overflow-hidden"
                   style={{ background: T.cardBg, borderColor: T.cardBorder }}
                 >
-                  <button
-                    className="w-full flex items-center justify-between p-4 transition-colors"
-                    style={{ background: 'transparent' }}
-                    onClick={() => setExpandedAccordion(expandedAccordion === gi ? null : gi)}
+                  {/* Card header */}
+                  <div
+                    className="px-5 pt-5 pb-3 flex items-start justify-between gap-3"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{group.emoji}</span>
-                      <span style={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.05rem', color: group.color }}>{group.type}</span>
-                      <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: isDark ? group.bgDark : group.bg, color: group.color }}>
-                        {group.words.length} indicators
-                      </span>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span style={{ fontSize: '1.4rem' }}>{ex.emoji}</span>
+                        <span style={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.1rem', color: isDark ? '#C4B5FD' : '#1E1B4B' }}>{ex.title}</span>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: T.textMuted, fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>{ex.subtitle}</p>
                     </div>
-                    <motion.div animate={{ rotate: expandedAccordion === gi ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                      <ChevronDown size={18} style={{ color: group.color }} />
-                    </motion.div>
-                  </button>
-                  <AnimatePresence>
-                    {expandedAccordion === gi && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                        className="overflow-hidden"
-                      >
-                        <div className="px-4 pb-4">
-                          <div className="flex flex-wrap gap-2">
-                            {group.words.map((w, wi) => (
-                              <motion.span
-                                key={wi}
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: wi * 0.03 }}
-                                className="px-3 py-1.5 rounded-full text-sm font-semibold"
-                                style={{
-                                  background: isDark ? group.bgDark : group.bg,
-                                  color: group.color,
-                                  border: `1.5px solid ${group.border}`,
-                                  fontFamily: "'Nunito', sans-serif",
-                                }}
-                              >
-                                {w}
-                              </motion.span>
-                            ))}
-                          </div>
+                    <div className="flex gap-1.5 flex-wrap justify-end">
+                      {ex.mechanisms.map((m, mi) => (
+                        <span
+                          key={mi}
+                          className="rounded-full px-2.5 py-0.5 text-xs font-bold"
+                          style={{ background: isDark ? '#261845' : '#F5F0FF', color: '#7C3AED', border: '1.5px solid #A78BFA', fontFamily: "'Nunito', sans-serif" }}
+                        >
+                          {m}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Clue */}
+                  <div
+                    className="mx-5 mb-4 rounded-2xl px-4 py-3"
+                    style={{ background: isDark ? '#261845' : '#F9F7FF', border: `1.5px dashed ${isDark ? '#4C3580' : '#C4B5FD'}` }}
+                  >
+                    <p style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: '0.92rem', color: T.text, textAlign: 'center' }}>
+                      {ex.clue}
+                    </p>
+                  </div>
+
+                  {/* Steps */}
+                  <div className="px-5 pb-4 space-y-2">
+                    {ex.steps.map((step, si) => {
+                      const stepColors: Record<string, { bg: string; bgDark: string; text: string; border: string }> = {
+                        indicator: PART_COLORS.indicator,
+                        fodder: PART_COLORS.fodder,
+                        definition: PART_COLORS.definition,
+                      };
+                      const sc = stepColors[step.type];
+                      return (
+                        <div
+                          key={si}
+                          className="flex items-start gap-3 rounded-xl px-3 py-2"
+                          style={{
+                            background: isDark ? sc.bgDark : sc.bg,
+                            border: `1.5px solid ${sc.border}`,
+                          }}
+                        >
+                          <span style={{ fontFamily: "'Fredoka One', cursive", color: sc.text, fontSize: '0.85rem', flexShrink: 0, marginTop: 1 }}>{si + 1}.</span>
+                          <span style={{ fontSize: '0.84rem', color: sc.text, fontFamily: "'Nunito', sans-serif", fontWeight: 600, lineHeight: 1.5 }}>{step.text}</span>
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Answer + tip */}
+                  <div className="px-5 pb-5 flex items-start gap-3">
+                    <div
+                      className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 flex-shrink-0"
+                      style={{ background: isDark ? '#062010' : '#ECFDF5', border: '1.5px solid #34D399' }}
+                    >
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', fontFamily: "'Nunito', sans-serif" }}>ANSWER:</span>
+                      <span style={{ fontFamily: "'Fredoka One', cursive", color: '#059669', fontSize: '1rem' }}>{ex.answer}</span>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: T.textMuted, fontFamily: "'Nunito', sans-serif", fontWeight: 600, lineHeight: 1.5, paddingTop: 4 }}>
+                      💡 {ex.tip}
+                    </p>
+                  </div>
+                </motion.div>
               ))}
 
               <button
@@ -773,6 +897,31 @@ export function Learn() {
                 )}
               </div>
 
+              {/* NATO phonetic alphabet reference */}
+              <div
+                className="rounded-3xl p-5 border-2 flex items-center justify-between gap-4"
+                style={{ background: isDark ? '#0F172A' : '#EFF6FF', borderColor: isDark ? '#1E40AF' : '#BFDBFE' }}
+              >
+                <div>
+                  <p style={{ fontFamily: "'Fredoka One', cursive", fontSize: '1rem', color: isDark ? '#93C5FD' : '#1D4ED8', marginBottom: 4 }}>
+                    NATO Phonetic Alphabet 🔤
+                  </p>
+                  <p style={{ fontSize: '0.82rem', color: isDark ? '#BFDBFE' : '#1E40AF', lineHeight: 1.6, fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
+                    Setters use NATO letters as abbreviations — <em>Alpha → A, Bravo → B, Foxtrot → F</em>, etc. A handy reference for cryptic solving.
+                  </p>
+                </div>
+                <a
+                  href="https://en.wikipedia.org/wiki/NATO_phonetic_alphabet"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0 px-4 py-2 rounded-xl font-bold text-sm"
+                  style={{ background: isDark ? '#1E40AF' : '#2563EB', color: 'white', fontFamily: "'Nunito', sans-serif", textDecoration: 'none' }}
+                >
+                  View →
+                </a>
+              </div>
+
+              {/* Pro tip */}
               <div
                 className="rounded-3xl p-5 border-2 flex items-start gap-4"
                 style={{ background: isDark ? '#2A1505' : '#FFF7ED', borderColor: isDark ? '#92400E' : '#FED7AA' }}

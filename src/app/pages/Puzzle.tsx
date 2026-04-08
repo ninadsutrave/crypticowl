@@ -10,7 +10,7 @@ import { useDarkMode } from '../context/DarkModeContext';
 import { getTheme } from '../theme';
 import { useStreak, getXPForSolve, getLevelTitle, getLevelFromXP, hasSolvedToday } from '../hooks/useStreak';
 import { useAuth } from '../context/AuthContext';
-import { fetchPuzzleByDate } from '../../lib/supabase';
+import { fetchPuzzleByDate, fetchPuzzleByNumber, type DbDailyPuzzle, type PuzzleHint } from '../../lib/supabase';
 
 // ─── PUZZLE DATA ──────────────────────────────────────────────────────────────
 
@@ -412,6 +412,7 @@ function SuccessState({
   puzzleId,
   onReset,
   isDark,
+  activePuzzle,
 }: {
   hintsUsed: number;
   wrongAttemptsCount: number;
@@ -419,6 +420,7 @@ function SuccessState({
   puzzleId?: string;
   onReset: () => void;
   isDark: boolean;
+  activePuzzle: ActivePuzzle;
 }) {
   const [copied, setCopied] = useState(false);
   const runConfetti = useRef(false);
@@ -433,7 +435,7 @@ function SuccessState({
       runConfetti.current = true;
 
       // Record the solve — passes wrongAttemptsCount, puzzleId, and solveTime for Supabase
-      const result = recordSolve(hintsUsed, PUZZLE.number, user?.id, puzzleId, wrongAttemptsCount, solveTime || undefined);
+      const result = recordSolve(hintsUsed, activePuzzle.number, user?.id, puzzleId, wrongAttemptsCount, solveTime || undefined);
       if (result) {
         setFinalData({ streak: result.count, total: result.totalSolved, xp: result.xp, level: result.level });
       }
@@ -472,7 +474,7 @@ function SuccessState({
   };
 
   const shareText = [
-    `🦉 The Cryptic Owl #${PUZZLE.number}`,
+    `🦉 The Cryptic Owl #${activePuzzle.number}`,
     ``,
     `${getShareBlocks()}  (${hintsUsed}/4 hints used)`,
     `⏱️ ${solveTimeStr}  🔥 ${displayData.streak}-day streak`,
@@ -554,7 +556,7 @@ function SuccessState({
                 The Cryptic Owl
               </p>
               <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', fontFamily: "'Nunito', sans-serif", margin: 0 }}>
-                Puzzle #{PUZZLE.number} · {today}
+                Puzzle #{activePuzzle.number} · {today}
               </p>
             </div>
           </div>
@@ -738,7 +740,7 @@ function SuccessState({
           The Answer
         </p>
         <div className="flex gap-2 justify-center mb-4">
-          {PUZZLE.answer.split('').map((l, i) => (
+          {activePuzzle.answer.split('').map((l, i) => (
             <motion.div
               key={i}
               initial={{ scale: 0, rotate: -15 }}
@@ -761,7 +763,7 @@ function SuccessState({
             style={{ background: isDark ? '#261845' : '#F9F7FF', border: `2px dashed ${isDark ? '#4C3580' : '#C4B5FD'}` }}
           >
             <p style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: '1rem', color: T.text, lineHeight: 1.9 }}>
-              {CLUE_PARTS.map((part, i) =>
+              {activePuzzle.clueParts.map((part, i) =>
                 part.type ? (
                   <span
                     key={i}
@@ -785,37 +787,54 @@ function SuccessState({
           </div>
 
           <div className="space-y-2">
-            {[
-              { label: 'Fodder', value: 'PEARS — the letters to rearrange', style: PART_STYLES.fodder },
-              { label: 'Indicator', value: '"mixed up" → signals an anagram', style: PART_STYLES.indicator },
-              { label: 'Definition', value: '"a weapon" → confirms SPEAR', style: PART_STYLES.definition },
-              { label: 'Wordplay', value: 'PEARS → anagram → SPEAR ✓', style: PART_STYLES.wordplay },
-            ].map((row, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 + i * 0.1 }}
-                className="flex items-center gap-3 rounded-xl p-3"
-                style={{ background: isDark ? row.style.bgDark : row.style.bg, border: `1.5px solid ${row.style.border}` }}
+            {activePuzzle.clueParts
+              .filter(part => part.type && PART_STYLES[part.type])
+              .map((part, i) => {
+                const style = PART_STYLES[part.type!];
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 + i * 0.1 }}
+                    className="flex items-center gap-3 rounded-xl p-3"
+                    style={{ background: isDark ? style.bgDark : style.bg, border: `1.5px solid ${style.border}` }}
+                  >
+                    <span
+                      className="rounded-full px-2.5 py-0.5 text-xs font-bold flex-shrink-0"
+                      style={{ background: style.border, color: 'white', fontFamily: "'Nunito', sans-serif" }}
+                    >
+                      {style.label}
+                    </span>
+                    <span style={{ fontSize: '0.85rem', color: style.color, fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
+                      {part.text}
+                    </span>
+                  </motion.div>
+                );
+              })}
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 + activePuzzle.clueParts.filter(p => p.type).length * 0.1 }}
+              className="flex items-center gap-3 rounded-xl p-3"
+              style={{ background: isDark ? PART_STYLES.wordplay.bgDark : PART_STYLES.wordplay.bg, border: `1.5px solid ${PART_STYLES.wordplay.border}` }}
+            >
+              <span
+                className="rounded-full px-2.5 py-0.5 text-xs font-bold flex-shrink-0"
+                style={{ background: PART_STYLES.wordplay.border, color: 'white', fontFamily: "'Nunito', sans-serif" }}
               >
-                <span
-                  className="rounded-full px-2.5 py-0.5 text-xs font-bold flex-shrink-0"
-                  style={{ background: row.style.border, color: 'white', fontFamily: "'Nunito', sans-serif" }}
-                >
-                  {row.label}
-                </span>
-                <span style={{ fontSize: '0.85rem', color: row.style.color, fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
-                  {row.value}
-                </span>
-              </motion.div>
-            ))}
+                Answer
+              </span>
+              <span style={{ fontSize: '0.85rem', color: PART_STYLES.wordplay.color, fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
+                {activePuzzle.answer} ✓
+              </span>
+            </motion.div>
           </div>
         </div>
       </div>
 
       {/* Clue feedback — card variant in success state */}
-      <ClueReactionWidget puzzleNumber={PUZZLE.number} userId={user?.id} puzzleId={puzzleId} isDark={isDark} variant="card" />
+      <ClueReactionWidget puzzleNumber={activePuzzle.number} userId={user?.id} puzzleId={puzzleId} isDark={isDark} variant="card" />
 
       {/* Next puzzle countdown */}
       <NextPuzzleCountdown isDark={isDark} />
@@ -849,10 +868,10 @@ function WrongFeedback({
   isDark: boolean;
 }) {
   const messages = [
-    'Hmm… not quite! Try again? 🤔',
-    'Ooh, close but no cigar! Give it another go! 🎯',
-    'Not this time — but you\'re thinking the right way!',
-    'Nope! But don\'t give up — the answer is SPEAR-ingly close! 😄',
+    "Hmm… not quite! Try again? 🤔",
+    "Ooh, close but no cigar! Give it another go! 🎯",
+    "Not this time — but you're thinking the right way! 💡",
+    "Keep going! The answer is closer than you think! 🔍",
   ];
   const msg = messages[Math.floor(Math.random() * messages.length)];
 
@@ -907,11 +926,77 @@ function AlreadySolvedBanner({ isDark, onSolvePractice }: { isDark: boolean; onS
   );
 }
 
+// ─── ACTIVE PUZZLE TYPE ───────────────────────────────────────────────────────
+
+interface ActivePuzzle {
+  id?: string;
+  number: number;
+  clue: string;
+  answer: string;
+  letterCount: number;
+  hints: typeof PUZZLE.hints;
+  clueParts: typeof CLUE_PARTS;
+  date?: string;
+}
+
+function mapDbPuzzle(p: DbDailyPuzzle): ActivePuzzle {
+  return {
+    id: p.id,
+    number: p.number,
+    clue: p.clue_text,
+    answer: p.answer,
+    letterCount: p.answer_length,
+    hints: p.hints.map((h: PuzzleHint) => ({
+      id: h.id,
+      title: h.title,
+      text: h.text,
+      highlight: h.highlight ?? null,
+      mascotComment: h.mascot_comment,
+      color: h.color,
+      bg: h.bg,
+      bgDark: h.bg_dark,
+      border: h.border,
+    })),
+    clueParts: (p.clue_parts ?? []).map(cp => ({ text: cp.text, type: cp.type as string | null })),
+    date: p.date,
+  };
+}
+
+const DEFAULT_PUZZLE: ActivePuzzle = {
+  id: undefined,
+  number: PUZZLE.number,
+  clue: PUZZLE.clue,
+  answer: PUZZLE.answer,
+  letterCount: PUZZLE.letterCount,
+  hints: PUZZLE.hints,
+  clueParts: CLUE_PARTS,
+};
+
 // ─── MAIN PUZZLE PAGE ─────────────────────────────────────────────────────────
 
 export function Puzzle() {
   const { number: puzzleNumberParam } = useParams<{ number?: string }>();
-  const isArchiveView = !!puzzleNumberParam && parseInt(puzzleNumberParam, 10) !== PUZZLE.number;
+  const requestedNumber = puzzleNumberParam ? parseInt(puzzleNumberParam, 10) : undefined;
+  const isArchive = !!requestedNumber && requestedNumber !== PUZZLE.number;
+
+  // For archive puzzles: load from Supabase
+  const [archivePuzzle, setArchivePuzzle] = useState<ActivePuzzle | null>(null);
+  const [archiveLoading, setArchiveLoading] = useState(isArchive);
+  const [archiveNotFound, setArchiveNotFound] = useState(false);
+
+  useEffect(() => {
+    if (!isArchive || !requestedNumber) return;
+    setArchiveLoading(true);
+    setArchiveNotFound(false);
+    fetchPuzzleByNumber(requestedNumber).then(p => {
+      if (p) setArchivePuzzle(mapDbPuzzle(p));
+      else setArchiveNotFound(true);
+      setArchiveLoading(false);
+    });
+  }, [requestedNumber]);
+
+  // The puzzle to play: archive puzzle (if loaded) or today's hardcoded puzzle
+  const activePuzzle: ActivePuzzle = archivePuzzle ?? DEFAULT_PUZZLE;
 
   const [answer, setAnswer] = useState('');
   const [hintsUnlocked, setHintsUnlocked] = useState(0);
@@ -927,34 +1012,47 @@ export function Puzzle() {
   const { isDark } = useDarkMode();
   const T = getTheme(isDark);
   const { user } = useAuth();
-  const alreadySolved = hasSolvedToday();
+  const alreadySolved = isArchive ? false : hasSolvedToday();
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
   // Fetch today's puzzle UUID from Supabase so we can write solve records and reactions.
   // Game logic stays on the hardcoded PUZZLE constant; this is purely for the DB foreign key.
   useEffect(() => {
+    if (isArchive) return;
     const isoDate = new Date().toISOString().split('T')[0];
     fetchPuzzleByDate(isoDate).then(p => { if (p) setPuzzleId(p.id); });
-  }, []);
+  }, [isArchive]);
 
-  // Archive view: past puzzle requested that isn't the hardcoded one
-  if (isArchiveView) {
+  // Loading state for archive puzzles
+  if (archiveLoading) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+        <div className="flex justify-center mb-6">
+          <Mascot mood="thinking" size={90} speechBubble="Loading puzzle..." bubbleDirection="right" animate />
+        </div>
+        <div className="flex gap-2 justify-center">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="w-10 h-10 rounded-xl animate-pulse" style={{ background: isDark ? '#261845' : '#EDE9FE' }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (archiveNotFound) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center" style={{ fontFamily: "'Nunito', sans-serif" }}>
         <div className="flex justify-center mb-6">
-          <Mascot mood="thinking" size={90} speechBubble="Loading past puzzles soon!" bubbleDirection="right" animate />
+          <Mascot mood="thinking" size={90} speechBubble="Puzzle not found!" bubbleDirection="right" animate />
         </div>
         <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.6rem', color: isDark ? '#C4B5FD' : '#5B21B6', marginBottom: 8 }}>
-          Puzzle #{puzzleNumberParam}
+          Puzzle #{requestedNumber} not found
         </h2>
         <p style={{ color: isDark ? '#9381CC' : '#6B7280', fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.6, maxWidth: 380, margin: '0 auto 24px' }}>
-          Archive puzzles are loaded from Supabase. Once your backend is connected, past puzzles will play here just like today's.
+          This puzzle hasn't been published yet, or the number is incorrect.
         </p>
-        <a
-          href="/puzzle"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold"
-          style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', color: 'white', fontFamily: "'Nunito', sans-serif", fontWeight: 800 }}
-        >
+        <a href="/puzzle" className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold"
+          style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', color: 'white', fontFamily: "'Nunito', sans-serif", fontWeight: 800 }}>
           ← Play Today's Puzzle
         </a>
       </div>
@@ -980,7 +1078,7 @@ export function Puzzle() {
 
   const handleSubmit = () => {
     if (!answer.trim()) return;
-    if (answer.trim().toUpperCase() === PUZZLE.answer) {
+    if (answer.trim().toUpperCase() === activePuzzle.answer) {
       setSolveTime(Math.floor((Date.now() - startTime) / 1000));
       setIsCorrect(true);
       setWrongAttempt(null);
@@ -993,7 +1091,7 @@ export function Puzzle() {
   };
 
   const handleHint = () => {
-    if (hintsUnlocked < PUZZLE.hints.length) {
+    if (hintsUnlocked < activePuzzle.hints.length) {
       setNewHintIndex(hintsUnlocked);
       setHintsUnlocked(prev => prev + 1);
       setWrongAttempt(null);
@@ -1008,7 +1106,7 @@ export function Puzzle() {
     setNewHintIndex(null);
   };
 
-  const visibleHints = PUZZLE.hints.slice(0, hintsUnlocked);
+  const visibleHints = activePuzzle.hints.slice(0, hintsUnlocked);
 
   return (
     <div className="max-w-2xl mx-auto px-4 pb-32 pt-6">
@@ -1025,7 +1123,7 @@ export function Puzzle() {
             <div className="flex items-start justify-between mb-5">
               <div>
                 <p style={{ fontFamily: "'Fredoka One', cursive", fontSize: '0.85rem', color: '#7C3AED', marginBottom: 2 }}>
-                  🧩 CRYPTIC #{PUZZLE.number}
+                  🧩 CRYPTIC #{activePuzzle.number}
                 </p>
                 <p style={{ fontSize: '0.8rem', color: T.textFaint, fontWeight: 600, fontFamily: "'Nunito', sans-serif" }}>
                   {today}
@@ -1068,16 +1166,16 @@ export function Puzzle() {
                     lineHeight: 1.7,
                   }}
                 >
-                  "{PUZZLE.clue}"
+                  "{activePuzzle.clue}"
                 </p>
               </div>
 
               {/* Clue feedback */}
-              <ClueReactionWidget puzzleNumber={PUZZLE.number} userId={user?.id} puzzleId={puzzleId} isDark={isDark} />
+              <ClueReactionWidget puzzleNumber={activePuzzle.number} userId={user?.id} puzzleId={puzzleId} isDark={isDark} />
 
               {/* Answer boxes */}
               <div className="flex gap-2">
-                {[...Array(PUZZLE.letterCount)].map((_, i) => {
+                {[...Array(activePuzzle.letterCount)].map((_, i) => {
                   const char = answer[i];
                   return (
                     <motion.div
@@ -1122,7 +1220,7 @@ export function Puzzle() {
               <input
                 ref={inputRef}
                 type="text"
-                maxLength={PUZZLE.letterCount}
+                maxLength={activePuzzle.letterCount}
                 value={answer}
                 onChange={e => setAnswer(e.target.value.replace(/[^a-zA-Z]/g, ''))}
                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
@@ -1145,14 +1243,14 @@ export function Puzzle() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSubmit}
-                disabled={answer.length !== PUZZLE.letterCount}
+                disabled={answer.length !== activePuzzle.letterCount}
                 className="px-5 py-3 rounded-2xl flex items-center gap-2 transition-all disabled:opacity-40"
                 style={{
                   background:
-                    answer.length === PUZZLE.letterCount
+                    answer.length === activePuzzle.letterCount
                       ? 'linear-gradient(135deg, #7C3AED, #5B21B6)'
                       : isDark ? '#261845' : '#E5E7EB',
-                  color: answer.length === PUZZLE.letterCount ? 'white' : isDark ? '#4C3580' : '#9CA3AF',
+                  color: answer.length === activePuzzle.letterCount ? 'white' : isDark ? '#4C3580' : '#9CA3AF',
                   fontFamily: "'Nunito', sans-serif",
                   fontWeight: 800,
                 }}
@@ -1166,7 +1264,7 @@ export function Puzzle() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
               onClick={handleHint}
-              disabled={hintsUnlocked >= PUZZLE.hints.length}
+              disabled={hintsUnlocked >= activePuzzle.hints.length}
               className="w-full py-3 rounded-2xl flex items-center justify-center gap-2 border-2 transition-all disabled:opacity-40"
               style={{
                 borderColor: isDark ? '#92400E' : '#FED7AA',
@@ -1177,12 +1275,12 @@ export function Puzzle() {
               }}
             >
               <Lightbulb size={16} />
-              {hintsUnlocked >= PUZZLE.hints.length
+              {hintsUnlocked >= activePuzzle.hints.length
                 ? 'No more hints!'
-                : `Get Hint ${hintsUnlocked + 1} of ${PUZZLE.hints.length}`}
-              {hintsUnlocked > 0 && hintsUnlocked < PUZZLE.hints.length && (
+                : `Get Hint ${hintsUnlocked + 1} of ${activePuzzle.hints.length}`}
+              {hintsUnlocked > 0 && hintsUnlocked < activePuzzle.hints.length && (
                 <span className="ml-1 flex gap-1">
-                  {[...Array(PUZZLE.hints.length)].map((_, i) => (
+                  {[...Array(activePuzzle.hints.length)].map((_, i) => (
                     <span
                       key={i}
                       className="w-1.5 h-1.5 rounded-full"
@@ -1204,7 +1302,7 @@ export function Puzzle() {
               >
                 <div className="flex items-center justify-between">
                   <h3 style={{ fontFamily: "'Fredoka One', cursive", fontSize: '1rem', color: isDark ? '#C4B5FD' : '#1E1B4B' }}>
-                    💡 Hints Unlocked ({hintsUnlocked}/{PUZZLE.hints.length})
+                    💡 Hints Unlocked ({hintsUnlocked}/{activePuzzle.hints.length})
                   </h3>
                   {visibleHints.length > 1 && (
                     <button
@@ -1238,7 +1336,7 @@ export function Puzzle() {
           </AnimatePresence>
         </div>
       ) : (
-        <SuccessState hintsUsed={hintsUnlocked} wrongAttemptsCount={wrongAttemptsCount} solveTime={solveTime} puzzleId={puzzleId} onReset={handleReset} isDark={isDark} />
+        <SuccessState hintsUsed={hintsUnlocked} wrongAttemptsCount={wrongAttemptsCount} solveTime={solveTime} puzzleId={puzzleId} onReset={handleReset} isDark={isDark} activePuzzle={activePuzzle} />
       )}
 
       {/* Mobile sticky input bar */}
@@ -1253,7 +1351,7 @@ export function Puzzle() {
         >
           <input
             type="text"
-            maxLength={PUZZLE.letterCount}
+            maxLength={activePuzzle.letterCount}
             value={answer}
             onChange={e => setAnswer(e.target.value.replace(/[^a-zA-Z]/g, ''))}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
@@ -1271,7 +1369,7 @@ export function Puzzle() {
           />
           <button
             onClick={handleSubmit}
-            disabled={answer.length !== PUZZLE.letterCount}
+            disabled={answer.length !== activePuzzle.letterCount}
             className="px-4 py-3 rounded-2xl disabled:opacity-40"
             style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', color: 'white' }}
           >
@@ -1279,7 +1377,7 @@ export function Puzzle() {
           </button>
           <button
             onClick={handleHint}
-            disabled={hintsUnlocked >= PUZZLE.hints.length}
+            disabled={hintsUnlocked >= activePuzzle.hints.length}
             className="px-4 py-3 rounded-2xl disabled:opacity-40"
             style={{
               background: isDark ? '#2A1505' : '#FFF7ED',

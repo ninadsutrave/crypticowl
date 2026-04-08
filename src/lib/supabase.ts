@@ -68,7 +68,9 @@ export interface DbDailyPuzzle {
 
   // From clues
   id: string;
-  published: boolean;
+  // Note: no `published` field — daily_puzzles.published is the sole visibility gate.
+  // The RLS policy on clues enforces this; only clues with a published daily_puzzle row
+  // are ever returned.
   clue_text: string;
   answer: string;
   answer_length: number;           // generated column — always equals answer.length
@@ -158,13 +160,16 @@ export interface DbClueSolveStats {
  */
 export async function fetchPuzzleByDate(isoDate: string): Promise<DbDailyPuzzle | null> {
   if (!isSupabaseConfigured) return null;
+  // Use limit(1) + order rather than .single() so that future multi-clue days
+  // (crossword mode) don't cause a "multiple rows" error. We always want the first
+  // clue in sequence (sequence_number = 1) for the standard daily game.
   const { data, error } = await supabase
     .from('daily_puzzles')
     .select(`
       puzzle_number,
       date,
       clues (
-        id, published,
+        id,
         clue_text, answer, answer_length, answer_pattern,
         primary_type, definition_text, wordplay_summary,
         clue_parts, hints,
@@ -174,19 +179,61 @@ export async function fetchPuzzleByDate(isoDate: string): Promise<DbDailyPuzzle 
     `)
     .eq('date', isoDate)
     .eq('published', true)
-    .single();
+    .order('sequence_number')
+    .limit(1);
 
   if (error) {
     console.warn('[supabase] fetchPuzzleByDate:', error.message);
     return null;
   }
-  if (!data || !data.clues) return null;
+  if (!data || data.length === 0 || !data[0].clues) return null;
 
   // Flatten the nested join into a single object
-  const clue = data.clues as unknown as Record<string, unknown>;
+  const row  = data[0];
+  const clue = row.clues as unknown as Record<string, unknown>;
   return {
-    number: data.puzzle_number,
-    date:   data.date,
+    number: row.puzzle_number,
+    date:   row.date,
+    ...clue,
+  } as DbDailyPuzzle;
+}
+
+/**
+ * Fetch a published puzzle by its sequential puzzle number (e.g. 42).
+ * Returns null if not found or not published.
+ */
+export async function fetchPuzzleByNumber(puzzleNumber: number): Promise<DbDailyPuzzle | null> {
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase
+    .from('daily_puzzles')
+    .select(`
+      puzzle_number,
+      date,
+      clues (
+        id,
+        clue_text, answer, answer_length, answer_pattern,
+        primary_type, definition_text, wordplay_summary,
+        clue_parts, hints,
+        difficulty, author, tags,
+        created_at, updated_at
+      )
+    `)
+    .eq('puzzle_number', puzzleNumber)
+    .eq('published', true)
+    .order('sequence_number')
+    .limit(1);
+
+  if (error) {
+    console.warn('[supabase] fetchPuzzleByNumber:', error.message);
+    return null;
+  }
+  if (!data || data.length === 0 || !data[0].clues) return null;
+
+  const row = data[0];
+  const clue = row.clues as unknown as Record<string, unknown>;
+  return {
+    number: row.puzzle_number,
+    date: row.date,
     ...clue,
   } as DbDailyPuzzle;
 }
@@ -200,7 +247,7 @@ export async function fetchPuzzleArchive(): Promise<DbDailyPuzzle[]> {
       puzzle_number,
       date,
       clues (
-        id, published,
+        id,
         clue_text, answer_length, answer_pattern,
         primary_type, difficulty
       )
@@ -319,6 +366,10 @@ export async function callRecordSolve(
     wrongAttempts: number;
     xpEarned: number;
     solveTimeSeconds?: number;
+    /** ISO date string "YYYY-MM-DD" in the user's local timezone.
+     *  Passed as p_client_date to avoid streak-breaking timezone skew
+     *  (e.g. IST users solving at 11 PM are still on "yesterday" in UTC). */
+    clientDate?: string;
   }
 ): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
@@ -330,6 +381,7 @@ export async function callRecordSolve(
     p_wrong_attempts:     record.wrongAttempts,
     p_xp_earned:          record.xpEarned,
     p_solve_time_seconds: record.solveTimeSeconds ?? null,
+    p_client_date:        record.clientDate ?? null,
   });
   if (error) {
     console.warn('[supabase] record_solve:', error.message);

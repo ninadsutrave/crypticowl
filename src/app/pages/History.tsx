@@ -8,6 +8,10 @@ import { useStreak, getLevelTitle } from '../hooks/useStreak';
 import { Mascot } from '../components/Mascot';
 import { useNavigate } from 'react-router';
 import {
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid,
+} from 'recharts';
+import {
   fetchSolveHistory,
   fetchUserStats,
   fetchPuzzleArchive,
@@ -141,7 +145,7 @@ function SignInGate({ isDark }: { isDark: boolean }) {
           )}
 
           <p style={{ color: T.textFaint, fontSize: '0.78rem', marginTop: '1rem' }}>
-            The daily puzzle and all lessons are always free — no sign-in needed.
+            Sign in to save your streak and stats across devices.
           </p>
         </div>
       </motion.div>
@@ -175,39 +179,79 @@ function StatCard({ emoji, label, value, isDark }: { emoji: string; label: strin
 
 function SolveRow({ record, isDark, index }: { record: DbSolveRecord; isDark: boolean; index: number }) {
   const T = getTheme(isDark);
-  const hintColors = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#EF4444'];
+  const hintColors = ['#10B981', '#3B82F6', '#F59E0B', '#F97316', '#EF4444'];
   const hintLabels = ['No hints', '1 hint', '2 hints', '3 hints', '4+ hints'];
   const hintsIdx = Math.min(record.hints_used, 4);
   const dateStr = new Date(record.solved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+  const timeStr = record.solve_time_seconds == null
+    ? null
+    : record.solve_time_seconds < 60
+      ? `${record.solve_time_seconds}s`
+      : `${Math.floor(record.solve_time_seconds / 60)}m ${record.solve_time_seconds % 60}s`;
+
   return (
     <motion.div
-      className="flex items-center justify-between px-4 py-3 rounded-2xl border"
+      className="rounded-2xl border px-4 py-3"
       style={{ background: T.cardBg, borderColor: T.cardBorder }}
       initial={{ opacity: 0, x: -16 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05, duration: 0.22 }}
     >
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-9 h-9 rounded-xl" style={{ background: isDark ? '#261845' : '#F5F0FF' }}>
-          <PuzzleIcon size={16} style={{ color: isDark ? '#C4B5FD' : '#7C3AED' }} />
+      {/* Top row: puzzle number + date + XP */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-center w-8 h-8 rounded-xl flex-shrink-0" style={{ background: isDark ? '#261845' : '#F5F0FF' }}>
+            <PuzzleIcon size={14} style={{ color: isDark ? '#C4B5FD' : '#7C3AED' }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, color: T.text, fontSize: '0.9rem', lineHeight: 1.2 }}>Puzzle #{record.puzzle_number}</div>
+            <div style={{ fontSize: '0.72rem', color: T.textMuted }}>{dateStr}</div>
+          </div>
         </div>
-        <div>
-          <div style={{ fontWeight: 700, color: T.text, fontSize: '0.9rem' }}>Puzzle #{record.puzzle_number}</div>
-          <div style={{ fontSize: '0.75rem', color: T.textMuted }}>{dateStr}</div>
+        <div className="flex items-center gap-1">
+          <Zap size={13} style={{ color: '#F59E0B' }} />
+          <span style={{ fontFamily: "'Fredoka One', cursive", color: '#F59E0B', fontSize: '0.9rem' }}>+{record.xp_earned} XP</span>
         </div>
       </div>
-      <div className="flex items-center gap-3">
+
+      {/* Bottom row: hints · time · wrong attempts */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Hints */}
         <span
           className="px-2 py-0.5 rounded-full text-xs font-bold"
           style={{ background: isDark ? '#1A1035' : '#F5F0FF', color: hintColors[hintsIdx], border: `1px solid ${hintColors[hintsIdx]}40` }}
         >
-          {hintLabels[hintsIdx]}
+          💡 {hintLabels[hintsIdx]}
         </span>
-        <div className="flex items-center gap-1">
-          <Zap size={13} style={{ color: '#F59E0B' }} />
-          <span style={{ fontFamily: "'Fredoka One', cursive", color: '#F59E0B', fontSize: '0.9rem' }}>+{record.xp_earned}</span>
-        </div>
+
+        {/* Solve time */}
+        {timeStr && (
+          <span
+            className="px-2 py-0.5 rounded-full text-xs font-bold"
+            style={{ background: isDark ? '#021520' : '#F0F9FF', color: '#0284C7', border: '1px solid #38BDF840' }}
+          >
+            ⏱ {timeStr}
+          </span>
+        )}
+
+        {/* Wrong attempts */}
+        {record.wrong_attempts > 0 && (
+          <span
+            className="px-2 py-0.5 rounded-full text-xs font-bold"
+            style={{ background: isDark ? '#2A0F15' : '#FFF1F2', color: '#EF4444', border: '1px solid #EF444440' }}
+          >
+            ✗ {record.wrong_attempts} wrong
+          </span>
+        )}
+        {record.wrong_attempts === 0 && (
+          <span
+            className="px-2 py-0.5 rounded-full text-xs font-bold"
+            style={{ background: isDark ? '#062010' : '#ECFDF5', color: '#10B981', border: '1px solid #10B98140' }}
+          >
+            ✓ First try
+          </span>
+        )}
       </div>
     </motion.div>
   );
@@ -249,6 +293,230 @@ function ArchiveRow({ puzzle, isDark, index }: { puzzle: DbDailyPuzzle; isDark: 
       </div>
       <ChevronRight size={18} style={{ color: T.textFaint }} />
     </motion.button>
+  );
+}
+
+// ─── SOLVE INSIGHTS ───────────────────────────────────────────────────────────
+
+function SolveInsights({ solveHistory, isDark }: { solveHistory: DbSolveRecord[]; isDark: boolean }) {
+  const T = getTheme(isDark);
+
+  // A. Activity Heatmap — last 12 weeks (84 days)
+  const today = new Date();
+  const gridDays: { date: Date; solved: boolean; isToday: boolean }[] = [];
+  const solvedDates = new Set(solveHistory.map(r => new Date(r.solved_at).toDateString()));
+
+  for (let i = 83; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    gridDays.push({
+      date: d,
+      solved: solvedDates.has(d.toDateString()),
+      isToday: d.toDateString() === today.toDateString(),
+    });
+  }
+
+  const startDayOfWeek = gridDays[0].date.getDay();
+  const padding = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+  const paddedDays = [...Array(padding).fill(null), ...gridDays];
+  const weeks: (typeof gridDays[0] | null)[][] = [];
+  for (let w = 0; w < Math.ceil(paddedDays.length / 7); w++) {
+    weeks.push(paddedDays.slice(w * 7, w * 7 + 7));
+  }
+
+  // B. Trend data — last 30 solves, ordered oldest → newest
+  const recent = [...solveHistory].slice(0, 30).reverse();
+  const trendData = recent.map(r => ({
+    name: `#${r.puzzle_number}`,
+    hints: r.hints_used,
+    wrong: r.wrong_attempts,
+    time: r.solve_time_seconds ?? undefined,
+  }));
+  const hasTimeData = trendData.some(d => d.time !== undefined);
+
+  // C. Compute improvement: compare avg of first half vs second half (positive = improved)
+  function computeTrend(values: (number | undefined)[]): number | null {
+    const valid = values.filter((v): v is number => v !== undefined);
+    if (valid.length < 4) return null;
+    const half = Math.floor(valid.length / 2);
+    const firstAvg = valid.slice(0, half).reduce((a, b) => a + b, 0) / half;
+    const secondAvg = valid.slice(half).reduce((a, b) => a + b, 0) / (valid.length - half);
+    if (firstAvg === 0) return null;
+    return Math.round(((firstAvg - secondAvg) / firstAvg) * 100);
+  }
+
+  const hintTrend = computeTrend(trendData.map(d => d.hints));
+  const wrongTrend = computeTrend(trendData.map(d => d.wrong));
+  const timeTrend = computeTrend(trendData.map(d => d.time));
+
+  const weekLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const cardStyle = { background: T.cardBg, borderColor: T.cardBorder };
+  const axisColor = isDark ? '#6B5FA0' : '#9CA3AF';
+  const gridColor = isDark ? '#2D1F55' : '#E5E7EB';
+
+  // Trend badge component
+  const TrendBadge = ({
+    label, trend, icon,
+  }: {
+    label: string; trend: number | null; icon: string;
+  }) => {
+    const improving = trend !== null && trend > 0;
+    const declining = trend !== null && trend < 0;
+    const badgeColor = improving ? '#10B981' : declining ? '#EF4444' : '#9CA3AF';
+    const badgeBg = improving
+      ? isDark ? '#062010' : '#ECFDF5'
+      : declining
+      ? isDark ? '#2A0F15' : '#FFF1F2'
+      : isDark ? '#1A1035' : '#F5F0FF';
+    const arrow = improving ? '↓' : declining ? '↑' : '→';
+    const msg = improving
+      ? 'Getting better!'
+      : declining
+      ? 'Room to improve'
+      : trend === null
+      ? 'Keep playing'
+      : 'Holding steady';
+
+    return (
+      <div className="flex-1 min-w-[130px] rounded-2xl border p-3" style={{ background: badgeBg, borderColor: `${badgeColor}40` }}>
+        <div className="flex items-center gap-1.5 mb-1">
+          <span style={{ fontSize: '0.9rem' }}>{icon}</span>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: T.textMuted, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>{label}</span>
+        </div>
+        <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.35rem', color: badgeColor, lineHeight: 1 }}>
+          {trend !== null ? `${arrow} ${Math.abs(trend)}%` : '—'}
+        </div>
+        <div style={{ fontSize: '0.68rem', color: badgeColor, marginTop: 2 }}>{msg}</div>
+      </div>
+    );
+  };
+
+  return (
+    <motion.div
+      className="mb-6"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.15, duration: 0.4 }}
+    >
+      <h3 style={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.1rem', color: isDark ? '#C4B5FD' : '#5B21B6', marginBottom: '0.75rem' }}>
+        Your Improvement 📈
+      </h3>
+
+      {/* Trend badges */}
+      {trendData.length >= 4 && (
+        <div className="flex gap-3 flex-wrap mb-4">
+          <TrendBadge label="Hints" trend={hintTrend} icon="💡" />
+          <TrendBadge label="Wrong guesses" trend={wrongTrend} icon="✗" />
+          {hasTimeData && <TrendBadge label="Solve time" trend={timeTrend} icon="⏱" />}
+        </div>
+      )}
+
+      {/* Combined trend chart */}
+      <div className="rounded-2xl border p-4 mb-4" style={cardStyle}>
+        <p style={{ fontSize: '0.75rem', fontWeight: 700, color: T.textFaint, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Performance Trend — Last {recent.length} Puzzle{recent.length !== 1 ? 's' : ''} (oldest → newest)
+        </p>
+        {/* Legend */}
+        <div className="flex items-center gap-4 flex-wrap mb-3">
+          {[
+            { color: '#7C3AED', label: 'Hints' },
+            { color: '#EF4444', label: 'Wrong guesses' },
+            ...(hasTimeData ? [{ color: '#0EA5E9', label: 'Time (s)' }] : []),
+          ].map(({ color, label }) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <div style={{ width: 18, height: 3, borderRadius: 2, background: color }} />
+              <span style={{ fontSize: '0.7rem', color: T.textMuted, fontWeight: 600 }}>{label}</span>
+            </div>
+          ))}
+        </div>
+        {trendData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={210}>
+            <LineChart data={trendData} margin={{ top: 4, right: hasTimeData ? 36 : 4, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="name" tick={{ fontSize: 9, fill: axisColor }} interval="preserveStartEnd" />
+              <YAxis yAxisId="left" allowDecimals={false} tick={{ fontSize: 9, fill: axisColor }} />
+              {hasTimeData && (
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9, fill: '#0EA5E9' }} />
+              )}
+              <Tooltip
+                contentStyle={{ background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: T.text, fontWeight: 700 }}
+                formatter={(value: number, name: string) => {
+                  if (name === 'time') {
+                    return [value < 60 ? `${value}s` : `${Math.floor(value / 60)}m ${value % 60}s`, 'Time'];
+                  }
+                  if (name === 'hints') return [value, 'Hints'];
+                  if (name === 'wrong') return [value, 'Wrong guesses'];
+                  return [value, name];
+                }}
+              />
+              <Line yAxisId="left" type="monotone" dataKey="hints" stroke="#7C3AED" strokeWidth={2} dot={{ r: 3, fill: '#7C3AED' }} activeDot={{ r: 5 }} name="hints" />
+              <Line yAxisId="left" type="monotone" dataKey="wrong" stroke="#EF4444" strokeWidth={2} dot={{ r: 3, fill: '#EF4444' }} activeDot={{ r: 5 }} name="wrong" />
+              {hasTimeData && (
+                <Line yAxisId="right" type="monotone" dataKey="time" stroke="#0EA5E9" strokeWidth={2} dot={{ r: 3, fill: '#0EA5E9' }} activeDot={{ r: 5 }} name="time" connectNulls />
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div style={{ height: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textFaint, fontSize: '0.8rem' }}>
+            No data yet — go solve some puzzles!
+          </div>
+        )}
+        {trendData.length > 0 && trendData.length < 4 && (
+          <p style={{ fontSize: '0.7rem', color: T.textFaint, marginTop: 8, textAlign: 'center' }}>
+            Solve {4 - trendData.length} more puzzle{4 - trendData.length > 1 ? 's' : ''} to unlock trend analysis
+          </p>
+        )}
+      </div>
+
+      {/* Activity Heatmap */}
+      <div className="rounded-2xl border p-4" style={cardStyle}>
+        <p style={{ fontSize: '0.75rem', fontWeight: 700, color: T.textFaint, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Solve Activity — Last 12 Weeks
+        </p>
+        <div className="flex gap-1">
+          <div className="flex flex-col gap-0.5 mr-1">
+            {weekLabels.map(d => (
+              <div key={d} style={{ height: 14, fontSize: '0.6rem', color: axisColor, lineHeight: '14px', width: 24, textAlign: 'right', fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
+                {d}
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-0.5">
+            {weeks.map((week, wi) => (
+              <div key={wi} className="flex flex-col gap-0.5">
+                {week.map((day, di) => (
+                  <div
+                    key={di}
+                    title={day ? day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                    style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: 3,
+                      background: day == null
+                        ? 'transparent'
+                        : day.isToday
+                        ? 'transparent'
+                        : day.solved
+                        ? '#7C3AED'
+                        : isDark ? '#2D1F55' : '#E5E7EB',
+                      border: day?.isToday ? '2px solid #A78BFA' : 'none',
+                      flexShrink: 0,
+                    }}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <div style={{ width: 10, height: 10, borderRadius: 2, background: isDark ? '#2D1F55' : '#E5E7EB' }} />
+          <span style={{ fontSize: '0.65rem', color: T.textFaint }}>No solve</span>
+          <div style={{ width: 10, height: 10, borderRadius: 2, background: '#7C3AED', marginLeft: 8 }} />
+          <span style={{ fontSize: '0.65rem', color: T.textFaint }}>Solved</span>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -306,6 +574,20 @@ export function History() {
   const totalSolved = remoteStats?.totalSolved ?? localStreak.totalSolved;
   const bestStreak = remoteStats?.bestStreak ?? localStreak.bestStreak;
   const streakCount = remoteStats?.streakCount ?? localStreak.count;
+
+  // Computed aggregates from solve history
+  const avgHints = solveHistory.length > 0
+    ? (solveHistory.reduce((s, r) => s + r.hints_used, 0) / solveHistory.length).toFixed(1)
+    : '—';
+  const timedSolves = solveHistory.filter(r => r.solve_time_seconds != null);
+  const avgTime = timedSolves.length > 0
+    ? Math.round(timedSolves.reduce((s, r) => s + r.solve_time_seconds!, 0) / timedSolves.length)
+    : null;
+  const avgTimeStr = avgTime == null ? '—' : avgTime < 60 ? `${avgTime}s` : `${Math.floor(avgTime / 60)}m ${avgTime % 60}s`;
+  const zeroHintSolves = solveHistory.filter(r => r.hints_used === 0).length;
+  const perfectPct = solveHistory.length > 0
+    ? Math.round((zeroHintSolves / solveHistory.length) * 100)
+    : null;
 
   return (
     <div className="min-h-screen" style={{ background: T.pageBg, fontFamily: "'Nunito', sans-serif" }}>
@@ -384,13 +666,27 @@ export function History() {
           <h3 style={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.1rem', color: isDark ? '#C4B5FD' : '#5B21B6', marginBottom: '0.75rem' }}>
             Your Stats
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Row 1: core counters */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
             <StatCard emoji="🔥" label="Current Streak" value={streakCount} isDark={isDark} />
             <StatCard emoji="🧩" label="Total Solved"   value={totalSolved}  isDark={isDark} />
             <StatCard emoji="🏅" label="Best Streak"    value={bestStreak}   isDark={isDark} />
             <StatCard emoji="⚡" label="Total XP"       value={xp}           isDark={isDark} />
           </div>
+          {/* Row 2: performance averages — only shown once we have solve history */}
+          {solveHistory.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <StatCard emoji="💡" label="Avg Hints / Puzzle" value={avgHints}    isDark={isDark} />
+              <StatCard emoji="⏱"  label="Avg Solve Time"    value={avgTimeStr}  isDark={isDark} />
+              <StatCard emoji="🎯" label="No-hint Solves"     value={perfectPct != null ? `${perfectPct}%` : '—'} isDark={isDark} />
+            </div>
+          )}
         </motion.div>
+
+        {/* ── Solve insights charts ────────────────────────────────── */}
+        {!loading && solveHistory.length > 0 && (
+          <SolveInsights solveHistory={solveHistory} isDark={isDark} />
+        )}
 
         {/* ── Solve history ────────────────────────────────────────── */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4 }} className="mb-6">

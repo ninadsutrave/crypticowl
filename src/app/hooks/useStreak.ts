@@ -135,6 +135,8 @@ export function useStreak() {
         wrongAttempts,
         xpEarned:         xpGained,
         solveTimeSeconds,
+        // Send the client's local date so the DB streak logic isn't skewed by UTC offset
+        clientDate:       new Date().toISOString().split('T')[0],
       }).catch(console.error);
     }
 
