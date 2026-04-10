@@ -303,6 +303,40 @@ CREATE TABLE clue_reactions (
 CREATE INDEX cr_clue_reaction_idx ON clue_reactions (clue_id, reaction);
 
 
+-- ─── APP LIKES ───────────────────────────────────────────────────────────────
+-- Global "Like" counter for the entire application.
+
+CREATE TABLE app_likes (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID REFERENCES auth.users(id) UNIQUE,
+  created_at  TIMESTAMPTZ DEFAULT now()
+);
+
+-- RLS
+ALTER TABLE app_likes ENABLE ROW LEVEL SECURITY;
+
+-- Authenticated users can insert their own like (exactly once due to UNIQUE)
+CREATE POLICY "app_likes_auth_insert" ON app_likes
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Anonymous users can insert too (if we want to allow guest likes)
+CREATE POLICY "app_likes_anon_insert" ON app_likes
+  FOR INSERT WITH CHECK (auth.uid() IS NULL);
+
+-- Anyone can read the total count
+CREATE POLICY "app_likes_public_read" ON app_likes
+  FOR SELECT USING (true);
+
+-- Grant access to anon and authenticated
+GRANT SELECT, INSERT ON app_likes TO anon, authenticated;
+
+-- Helper view for total count
+CREATE OR REPLACE VIEW app_likes_count AS
+  SELECT count(*) as total_likes FROM app_likes;
+
+GRANT SELECT ON app_likes_count TO anon, authenticated;
+
+
 -- ─── VIEWS ───────────────────────────────────────────────────────────────────
 
 -- Aggregate reaction counts per clue (no user_id exposed)

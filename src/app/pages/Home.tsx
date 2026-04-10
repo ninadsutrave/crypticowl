@@ -823,8 +823,24 @@ export function Home() {
 
   useEffect(() => {
     const isoDate = new Date().toISOString().split('T')[0];
+    const cacheKey = `tco-puzzle-${isoDate}`;
+    const cached = localStorage.getItem(cacheKey);
+
+    if (cached) {
+      try {
+        const p = JSON.parse(cached);
+        setTodaysPuzzle({ number: p.number, clue: p.clue_text, letterCount: p.answer_length });
+        return;
+      } catch (e) {
+        localStorage.removeItem(cacheKey);
+      }
+    }
+
     fetchPuzzleByDate(isoDate).then(p => {
-      if (p) setTodaysPuzzle({ number: p.number, clue: p.clue_text, letterCount: p.answer_length });
+      if (p) {
+        setTodaysPuzzle({ number: p.number, clue: p.clue_text, letterCount: p.answer_length });
+        localStorage.setItem(cacheKey, JSON.stringify(p));
+      }
     });
   }, []);
 

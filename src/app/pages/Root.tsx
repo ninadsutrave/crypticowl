@@ -10,6 +10,7 @@ import {
   History,
   Lock,
   LogOut,
+  Heart,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -17,6 +18,76 @@ import { useDarkMode } from '../context/DarkModeContext';
 import { getTheme } from '../theme';
 import { useStreak } from '../hooks/useStreak';
 import { useAuth } from '../context/AuthContext';
+import {
+  fetchAppLikesCount,
+  addAppLike,
+  removeAppLike,
+  isSupabaseConfigured,
+} from '../../lib/supabase';
+
+function LikeButton({ isDark }: { isDark: boolean }) {
+  const { user } = useAuth();
+  const [liked, setLiked] = useState(() => {
+    const val = localStorage.getItem('tco-app-liked');
+    return val === 'true';
+  });
+  const [totalLikes, setTotalLikes] = useState(0);
+  const T = getTheme(isDark);
+
+  useEffect(() => {
+    if (isSupabaseConfigured) {
+      fetchAppLikesCount().then(setTotalLikes);
+    }
+  }, []);
+
+  const toggleLike = async () => {
+    if (liked) return; // Disable unlike
+
+    setLiked(true);
+    localStorage.setItem('tco-app-liked', 'true');
+
+    if (isSupabaseConfigured) {
+      setTotalLikes(prev => prev + 1);
+      const success = await addAppLike(user?.id);
+      if (!success) {
+        // We don't rollback for unique violation because the user already liked it.
+        // If it's another error, we still keep the UI state for better UX.
+      }
+    }
+  };
+
+  const activePurple = isDark ? '#A78BFA' : '#7C3AED';
+
+  return (
+    <motion.button
+      onClick={toggleLike}
+      whileHover={!liked ? { scale: 1.05 } : {}}
+      whileTap={!liked ? { scale: 0.95 } : {}}
+      disabled={liked}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all"
+      style={{
+        background: liked ? (isDark ? '#2D1B69' : '#F5F0FF') : 'transparent',
+        borderColor: liked ? activePurple : T.navBorder,
+        color: liked ? activePurple : T.text,
+        cursor: liked ? 'default' : 'pointer',
+      }}
+    >
+      <Heart size={14} fill={liked ? activePurple : 'none'} />
+      <span style={{ fontSize: '0.75rem', fontWeight: 800, fontFamily: "'Nunito', sans-serif" }}>
+        {liked ? 'Liked!' : 'Like us'}
+        <span
+          className="ml-1.5 px-1.5 py-0.5 rounded-full text-[0.65rem] font-black"
+          style={{
+            background: isDark ? '#1A1035' : (liked ? 'white' : '#EDE9FE'),
+            color: activePurple,
+          }}
+        >
+          {totalLikes}
+        </span>
+      </span>
+    </motion.button>
+  );
+}
 
 function OwlLogoMini() {
   return (
@@ -81,12 +152,12 @@ export function Root() {
 
   return (
     <div
-      className="min-h-screen transition-colors duration-300"
+      className="min-h-screen flex flex-col"
       style={{ background: T.pageBg, fontFamily: "'Nunito', sans-serif" }}
     >
       {/* Navigation */}
       <nav
-        className="sticky top-0 z-50 backdrop-blur-md border-b transition-colors duration-300"
+        className="sticky top-0 z-50 backdrop-blur-md border-b"
         style={{ background: T.navBg, borderColor: T.navBorder }}
       >
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -443,13 +514,13 @@ export function Root() {
         </AnimatePresence>
       </nav>
 
-      <main>
+      <main className="flex-grow">
         <Outlet />
       </main>
 
       {/* Footer */}
       <footer
-        className="mt-auto border-t py-8 transition-colors duration-300"
+        className="mt-auto border-t py-8"
         style={{ background: T.navBg, borderColor: T.navBorder }}
       >
         <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -480,18 +551,7 @@ export function Root() {
             >
               Privacy Policy
             </NavLink>
-            <div
-              className="flex items-center gap-2 px-3 py-1 rounded-full border"
-              style={{
-                background: isDark ? '#1E1B4B' : '#F5F3FF',
-                borderColor: T.navBorder,
-                fontSize: '0.75rem',
-                color: T.textMuted,
-              }}
-            >
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              v1.0.0
-            </div>
+            <LikeButton isDark={isDark} />
           </div>
         </div>
       </footer>
