@@ -4,12 +4,12 @@ import {
   Trophy,
   Zap,
   Lock,
-  LogOut,
   Calendar,
   Puzzle as PuzzleIcon,
   ChevronRight,
   BookOpen,
   RefreshCw,
+  LogOut,
 } from 'lucide-react';
 import { useDarkMode } from '../context/DarkModeContext';
 import { getTheme } from '../theme';

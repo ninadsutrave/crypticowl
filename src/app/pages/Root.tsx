@@ -446,6 +446,55 @@ export function Root() {
       <main>
         <Outlet />
       </main>
+
+      {/* Footer */}
+      <footer
+        className="mt-auto border-t py-8 transition-colors duration-300"
+        style={{ background: T.navBg, borderColor: T.navBorder }}
+      >
+        <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div
+            style={{
+              fontSize: '0.9rem',
+              color: T.textMuted,
+              fontFamily: "'Nunito', sans-serif",
+            }}
+          >
+            Copyright © {new Date().getFullYear()}{' '}
+            <a
+              href="https://ninadsutrave.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold hover:underline"
+              style={{ color: isDark ? '#A78BFA' : '#7C3AED' }}
+            >
+              Ninad Sutrave
+            </a>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <NavLink
+              to="/privacy"
+              className="text-sm font-semibold hover:underline no-underline"
+              style={{ color: isDark ? '#A78BFA' : '#7C3AED' }}
+            >
+              Privacy Policy
+            </NavLink>
+            <div
+              className="flex items-center gap-2 px-3 py-1 rounded-full border"
+              style={{
+                background: isDark ? '#1E1B4B' : '#F5F3FF',
+                borderColor: T.navBorder,
+                fontSize: '0.75rem',
+                color: T.textMuted,
+              }}
+            >
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              v1.0.0
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

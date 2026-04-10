@@ -1264,24 +1264,40 @@ export function Puzzle() {
   const requestedNumber = puzzleNumberParam ? parseInt(puzzleNumberParam, 10) : undefined;
   const isArchive = !!requestedNumber && requestedNumber !== PUZZLE.number;
 
-  // For archive puzzles: load from Supabase
-  const [archivePuzzle, setArchivePuzzle] = useState<ActivePuzzle | null>(null);
-  const [archiveLoading, setArchiveLoading] = useState(isArchive);
-  const [archiveNotFound, setArchiveNotFound] = useState(false);
+  // The puzzle to play: archive puzzle (if loaded) or today's hardcoded puzzle
+  const [activePuzzle, setActivePuzzle] = useState<ActivePuzzle>(DEFAULT_PUZZLE);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!isArchive || !requestedNumber) return;
-    setArchiveLoading(true);
-    setArchiveNotFound(false);
-    fetchPuzzleByNumber(requestedNumber).then(p => {
-      if (p) setArchivePuzzle(mapDbPuzzle(p));
-      else setArchiveNotFound(true);
-      setArchiveLoading(false);
-    });
-  }, [requestedNumber, isArchive]);
+    setLoading(true);
+    setNotFound(false);
 
-  // The puzzle to play: archive puzzle (if loaded) or today's hardcoded puzzle
-  const activePuzzle: ActivePuzzle = archivePuzzle ?? DEFAULT_PUZZLE;
+    if (isArchive && requestedNumber) {
+      fetchPuzzleByNumber(requestedNumber).then(p => {
+        if (p) {
+          setActivePuzzle(mapDbPuzzle(p));
+          setPuzzleId(p.id);
+        } else {
+          setNotFound(true);
+        }
+        setLoading(false);
+      });
+    } else {
+      // Fetch today's puzzle
+      const isoDate = new Date().toISOString().split('T')[0];
+      fetchPuzzleByDate(isoDate).then(p => {
+        if (p) {
+          setActivePuzzle(mapDbPuzzle(p));
+          setPuzzleId(p.id);
+        } else {
+          // Fallback to hardcoded if DB is empty/unconfigured
+          setActivePuzzle(DEFAULT_PUZZLE);
+        }
+        setLoading(false);
+      });
+    }
+  }, [requestedNumber, isArchive]);
 
   const [answer, setAnswer] = useState('');
   const [hintsUnlocked, setHintsUnlocked] = useState(0);
@@ -1307,15 +1323,11 @@ export function Puzzle() {
   // Fetch today's puzzle UUID from Supabase so we can write solve records and reactions.
   // Game logic stays on the hardcoded PUZZLE constant; this is purely for the DB foreign key.
   useEffect(() => {
-    if (isArchive) return;
-    const isoDate = new Date().toISOString().split('T')[0];
-    fetchPuzzleByDate(isoDate).then(p => {
-      if (p) setPuzzleId(p.id);
-    });
+    // Handled in the main loading effect above
   }, [isArchive]);
 
   // Loading state for archive puzzles
-  if (archiveLoading) {
+  if (loading) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <div className="flex justify-center mb-6">
@@ -1340,7 +1352,7 @@ export function Puzzle() {
     );
   }
 
-  if (archiveNotFound) {
+  if (notFound) {
     return (
       <div
         className="max-w-2xl mx-auto px-4 py-16 text-center"
