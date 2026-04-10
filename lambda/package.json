@@ -1,0 +1,16 @@
+{
+  "name": "cryptic-owl-lambda",
+  "version": "1.0.0",
+  "description": "Cryptic crossword generator Lambda",
+  "main": "lambda/index.js",
+  "type": "module",
+  "scripts": {
+    "zip": "zip -r function.zip lambda node_modules package.json"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1"
+  },
+  "engines": {
+    "node": ">=20.x"
+  }
+}
