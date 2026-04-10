@@ -1296,7 +1296,7 @@ export function Puzzle() {
           setPuzzleId(p.id);
           setLoading(false);
           return;
-        } catch (e) {
+        } catch {
           localStorage.removeItem(cacheKey);
         }
       }

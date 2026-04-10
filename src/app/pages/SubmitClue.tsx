@@ -68,7 +68,7 @@ export function SubmitClue() {
       } else {
         setError('Failed to submit. Please try again.');
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred.');
     } finally {
       setSubmitting(false);
@@ -76,9 +76,9 @@ export function SubmitClue() {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | React.SelectHTMLAttributes<HTMLSelectElement>>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target as HTMLInputElement;
+    const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -228,7 +228,7 @@ export function SubmitClue() {
                     <select
                       name="primary_type"
                       value={formData.primary_type}
-                      onChange={handleChange as any}
+                      onChange={handleChange}
                       className="w-full p-4 rounded-2xl border-2 focus:outline-none focus:border-[#7C3AED] transition-colors appearance-none"
                       style={inputStyle}
                     >

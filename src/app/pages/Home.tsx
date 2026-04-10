@@ -833,7 +833,7 @@ export function Home() {
         const p = JSON.parse(cached);
         setTodaysPuzzle({ number: p.number, clue: p.clue_text, letterCount: p.answer_length });
         return;
-      } catch (e) {
+      } catch {
         localStorage.removeItem(cacheKey);
       }
     }
