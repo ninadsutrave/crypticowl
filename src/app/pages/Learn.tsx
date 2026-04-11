@@ -3,12 +3,74 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Mascot } from '../components/Mascot';
 import { Search, ChevronRight, Eye } from 'lucide-react';
 import { useDarkMode } from '../context/DarkModeContext';
-import { getTheme } from '../theme';
+import { getTheme, type Theme } from '../theme';
 import learningData from '../data/learning_examples.json';
 
 // ─── TYPES & CONSTANTS ────────────────────────────────────────────────────────
 
 type CluePartKey = 'fodder' | 'indicator' | 'definition' | null;
+
+interface CluePart {
+  key: CluePartKey;
+  label: string;
+  emoji: string;
+  desc: string;
+  color: string;
+}
+
+interface WordplayBreakdown {
+  label: string;
+  text: string;
+  color: string;
+}
+
+interface WordplayType {
+  id: string;
+  label: string;
+  emoji: string;
+  color: string;
+  bg: string;
+  bgDark: string;
+  border: string;
+  desc: string;
+  clue: string;
+  breakdown: WordplayBreakdown[];
+  answer: string;
+  visual: string[];
+  visualAnswer: string[];
+  indicators: string[];
+}
+
+interface CompoundStep {
+  text: string;
+  type: string;
+}
+
+interface CompoundExample {
+  title: string;
+  subtitle: string;
+  emoji: string;
+  mechanisms: string[];
+  clue: string;
+  steps: CompoundStep[];
+  answer: string;
+  tip: string;
+}
+
+interface Synonym {
+  word: string;
+  cryptic: string;
+  note: string;
+}
+
+interface LearningData {
+  partsOfClue: CluePart[];
+  wordplayTypes: WordplayType[];
+  compoundExamples: CompoundExample[];
+  synonyms: Synonym[];
+}
+
+const data = learningData as LearningData;
 
 const PART_COLORS: Record<string, { bg: string; bgDark: string; text: string; border: string }> = {
   definition: { bg: '#EFF6FF', bgDark: '#0D1F35', text: '#1D4ED8', border: '#3B82F6' },
@@ -118,7 +180,7 @@ function PartsOfClue({ isDark }: { isDark: boolean }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {learningData.partsOfClue.map((part: any) => (
+        {data.partsOfClue.map((part: CluePart) => (
           <motion.button
             key={part.key}
             whileHover={{ scale: 1.02 }}
@@ -126,15 +188,18 @@ function PartsOfClue({ isDark }: { isDark: boolean }) {
             onClick={() => setActivePart(part.key === activePart ? null : part.key)}
             className="text-left p-4 rounded-2xl border-2 transition-all shadow-sm"
             style={{
-              borderColor: activePart === part.key ? PART_COLORS[part.key].border : T.cardBorder,
+              borderColor:
+                activePart === part.key ? PART_COLORS[part.key as string].border : T.cardBorder,
               background:
                 activePart === part.key
                   ? isDark
-                    ? PART_COLORS[part.key].bgDark
-                    : PART_COLORS[part.key].bg
+                    ? PART_COLORS[part.key as string].bgDark
+                    : PART_COLORS[part.key as string].bg
                   : T.cardBg,
               boxShadow:
-                activePart === part.key ? `0 0 0 3px ${PART_COLORS[part.key].border}22` : undefined,
+                activePart === part.key
+                  ? `0 0 0 3px ${PART_COLORS[part.key as string].border}22`
+                  : undefined,
             }}
           >
             <div className="text-2xl mb-2">{part.emoji}</div>
@@ -164,7 +229,7 @@ function PartsOfClue({ isDark }: { isDark: boolean }) {
   );
 }
 
-function WordplayTab({ type, isDark }: { type: any; isDark: boolean }) {
+function WordplayTab({ type, isDark }: { type: WordplayType; isDark: boolean }) {
   const T = getTheme(isDark);
 
   return (
@@ -217,7 +282,7 @@ function WordplayTab({ type, isDark }: { type: any; isDark: boolean }) {
         </p>
 
         <div className="flex flex-wrap gap-2 mb-4">
-          {type.breakdown.map((b: any, i: number) => {
+          {type.breakdown.map((b: WordplayBreakdown, i: number) => {
             const colors = PART_COLORS[b.color] || PART_COLORS.fodder;
             return (
               <div
@@ -350,7 +415,7 @@ function WordplayPreview({
         </h2>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {learningData.wordplayTypes.map((topic, i) => (
+        {data.wordplayTypes.map((topic: WordplayType, i) => (
           <motion.div
             key={i}
             whileHover={{ scale: 1.04, y: -2 }}
@@ -389,7 +454,15 @@ function WordplayPreview({
 
 const SECTIONS = ['Intro', 'Parts', 'Wordplay', 'Compound', 'Synonyms'];
 
-function CompoundExampleCard({ ex, isDark, T }: { ex: any; isDark: boolean; T: any }) {
+function CompoundExampleCard({
+  ex,
+  isDark,
+  T,
+}: {
+  ex: CompoundExample;
+  isDark: boolean;
+  T: Theme;
+}) {
   const [revealed, setRevealed] = useState(false);
 
   return (
@@ -465,7 +538,7 @@ function CompoundExampleCard({ ex, isDark, T }: { ex: any; isDark: boolean; T: a
             className="flex flex-col flex-grow"
           >
             <div className="space-y-3 flex-grow mb-4">
-              {ex.steps.map((step: any, si: number) => (
+              {ex.steps.map((step: CompoundStep, si: number) => (
                 <div key={si} className="flex items-start gap-3">
                   <div
                     className="w-5 h-5 rounded-full flex items-center justify-center text-[0.65rem] font-bold mt-0.5 flex-shrink-0"
@@ -940,58 +1013,19 @@ export function Learn() {
                 />
               </div>
 
-              {/* NATO Phonetic Alphabet Section */}
-              {!searchQuery && (
-                <div className="mb-8">
-                  <h3
-                    className="mb-4 px-2"
-                    style={{
-                      fontFamily: "'Fredoka One', cursive",
-                      fontSize: '1.1rem',
-                      color: isDark ? '#A78BFA' : '#7C3AED',
-                    }}
-                  >
-                    NATO Phonetic Alphabet ✈️
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {learningData.synonyms
-                      .filter(s => s.note === 'NATO Phonetic')
-                      .map((s, i) => (
-                        <div
-                          key={i}
-                          className="p-3 rounded-xl border text-center transition-all hover:scale-[1.02]"
-                          style={{
-                            background: isDark ? '#1A1B2E' : '#F8FAFC',
-                            borderColor: T.cardBorder,
-                          }}
-                        >
-                          <div
-                            className="text-xs font-bold uppercase tracking-wider mb-1"
-                            style={{ color: T.textFaint }}
-                          >
-                            {s.word}
-                          </div>
-                          <div
-                            className="text-lg font-black"
-                            style={{ color: T.text, fontFamily: "'Fredoka One', cursive" }}
-                          >
-                            {s.cryptic}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {learningData.synonyms
+                {data.synonyms
                   .filter(
-                    s =>
-                      s.note !== 'NATO Phonetic' &&
-                      (s.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        s.cryptic.toLowerCase().includes(searchQuery.toLowerCase()))
+                    (s: Synonym) =>
+                      s.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      s.cryptic.toLowerCase().includes(searchQuery.toLowerCase())
                   )
-                  .map((s, i) => (
+                  .sort((a: Synonym, b: Synonym) => {
+                    if (a.note === 'NATO Phonetic' && b.note !== 'NATO Phonetic') return -1;
+                    if (a.note !== 'NATO Phonetic' && b.note === 'NATO Phonetic') return 1;
+                    return 0;
+                  })
+                  .map((s: Synonym, i: number) => (
                     <div
                       key={i}
                       className="p-4 rounded-2xl border flex items-center justify-between group transition-all"
