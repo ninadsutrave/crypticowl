@@ -1031,21 +1031,28 @@ export function Learn() {
                       className="p-4 rounded-2xl border flex items-center justify-between group transition-all"
                       style={{ background: T.cardBg, borderColor: T.cardBorder }}
                     >
-                      <div>
+                      <div className="flex flex-col">
                         <div
-                          className="text-xs font-bold uppercase tracking-wider"
-                          style={{ color: T.textFaint }}
+                          style={{
+                            fontSize: '1.25rem',
+                            fontFamily: "'Fredoka One', cursive",
+                            color: isDark ? '#C4B5FD' : '#5B21B6',
+                            lineHeight: 1.2,
+                          }}
                         >
                           {s.word}
                         </div>
-                        <div className="text-sm" style={{ color: T.textMuted }}>
+                        <div
+                          className="text-[0.7rem] font-bold uppercase tracking-wider mt-1"
+                          style={{ color: T.textFaint }}
+                        >
                           {s.note}
                         </div>
                       </div>
                       <div
-                        className="text-xl font-black"
+                        className="text-2xl font-black"
                         style={{
-                          color: isDark ? '#C4B5FD' : '#5B21B6',
+                          color: '#059669',
                           fontFamily: "'Fredoka One', cursive",
                         }}
                       >
