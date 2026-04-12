@@ -1,10 +1,9 @@
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Mascot } from '../components/Mascot';
-import { BookOpen, Zap, ChevronRight, Trophy, Clock, Star, Send } from 'lucide-react';
+import { Zap, Star, Send, Clock } from 'lucide-react';
 import { useDarkMode } from '../context/DarkModeContext';
 import { getTheme } from '../theme';
-import { useStreak, getLevelTitle, getXPToNextLevel } from '../hooks/useStreak';
 import { useEffect, useState } from 'react';
 import { fetchPuzzleByDate } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -258,212 +257,7 @@ function TodaysPuzzleHero({
   );
 }
 
-// ─── STATS STRIP ──────────────────────────────────────────────────────────────
-
-function StatsStrip({ isDark }: { isDark: boolean }) {
-  const T = getTheme(isDark);
-  const { count, totalSolved, xp, level } = useStreak();
-  const { label: levelLabel } = getXPToNextLevel(xp);
-  const title = getLevelTitle(level);
-
-  const stats = [
-    { icon: '🔥', value: count.toString(), label: 'Day Streak', color: '#EA580C' },
-    { icon: '🧩', value: totalSolved.toString(), label: 'Puzzles Solved', color: '#7C3AED' },
-    { icon: '⚡', value: `${xp} XP`, label: levelLabel, color: '#0EA5E9' },
-    { icon: '🏅', value: title.split(' ')[0], label: 'Rank', color: '#D97706' },
-  ];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.5 }}
-      className="flex flex-wrap gap-2 sm:gap-3 justify-center mt-6 px-2"
-    >
-      {stats.map((s, i) => (
-        <motion.div
-          key={i}
-          whileHover={{ y: -3, scale: 1.04 }}
-          transition={{ type: 'spring', stiffness: 400 }}
-          className="flex flex-col items-center gap-1 rounded-3xl px-3 py-3 sm:px-5 sm:py-4 shadow-sm border flex-1 min-w-[120px] max-w-[160px]"
-          style={{ background: T.cardBg, borderColor: T.cardBorder }}
-        >
-          <span className="text-xl sm:text-2xl">{s.icon}</span>
-          <span
-            style={{
-              fontFamily: "'Fredoka One', cursive",
-              fontSize: '1.2rem',
-              color: s.color,
-            }}
-            className="sm:text-[1.4rem]"
-          >
-            {s.value}
-          </span>
-          <span
-            style={{ fontSize: '0.65rem', color: T.textMuted, fontWeight: 600 }}
-            className="sm:text-[0.75rem] text-center"
-          >
-            {s.label}
-          </span>
-        </motion.div>
-      ))}
-    </motion.div>
-  );
-}
-
-// ─── NEW PLAYER JOURNEY ───────────────────────────────────────────────────────
-
-function NewPlayerJourney({ onNavigate, isDark }: { onNavigate: () => void; isDark: boolean }) {
-  const T = getTheme(isDark);
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const steps = [
-    {
-      num: '1',
-      emoji: '📖',
-      title: 'Read the clue',
-      desc: 'Every cryptic clue has two paths to the answer: a straight definition AND wordplay.',
-      color: '#3B82F6',
-      bg: '#EFF6FF',
-      dbg: '#0D1F35',
-    },
-    {
-      num: '2',
-      emoji: '🚦',
-      title: 'Spot the indicator',
-      desc: 'Signal words like "mixed up" or "back" tell you what trick is being used.',
-      color: '#7C3AED',
-      bg: '#F5F0FF',
-      dbg: '#1A0F35',
-    },
-    {
-      num: '3',
-      emoji: '🔧',
-      title: 'Work the wordplay',
-      desc: 'Rearrange, hide, reverse or remove letters as instructed.',
-      color: '#F97316',
-      bg: '#FFF7ED',
-      dbg: '#2A1505',
-    },
-    {
-      num: '4',
-      emoji: '✅',
-      title: 'Confirm with the definition',
-      desc: "Your answer should match both the wordplay AND the plain definition. That's the double-check!",
-      color: '#059669',
-      bg: '#ECFDF5',
-      dbg: '#062010',
-    },
-  ];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className="max-w-lg mx-auto w-full rounded-3xl border-2 overflow-hidden shadow-sm"
-      style={{ background: T.cardBg, borderColor: isDark ? '#3D2A6B' : '#C4B5FD' }}
-    >
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-4 p-5 text-left transition-colors"
-        style={{ background: isDark ? '#261845' : '#F5F0FF' }}
-      >
-        <div className="flex items-center justify-center w-11 h-11 rounded-2xl bg-[#7C3AED] flex-shrink-0">
-          <span className="text-xl">🦉</span>
-        </div>
-        <div className="flex-1">
-          <p
-            style={{
-              fontFamily: "'Fredoka One', cursive",
-              fontSize: '1rem',
-              color: isDark ? '#C4B5FD' : '#5B21B6',
-              marginBottom: 2,
-            }}
-          >
-            New to cryptics? Start here!
-          </p>
-          <p style={{ fontSize: '0.8rem', color: T.textMuted, fontWeight: 600 }}>
-            Learn to crack clues in 4 easy steps
-          </p>
-        </div>
-        <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronRight size={20} style={{ color: isDark ? '#A78BFA' : '#7C3AED' }} />
-        </motion.div>
-      </button>
-
-      <motion.div
-        initial={false}
-        animate={{ height: isExpanded ? 'auto' : 0, opacity: isExpanded ? 1 : 0 }}
-        transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
-        className="overflow-hidden"
-      >
-        <div className="p-5 space-y-3">
-          {steps.map((step, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -12 }}
-              animate={isExpanded ? { opacity: 1, x: 0 } : { opacity: 0, x: -12 }}
-              transition={{ delay: i * 0.06 }}
-              className="flex items-start gap-3 rounded-2xl p-3"
-              style={{
-                background: isDark ? step.dbg : step.bg,
-                border: `1.5px solid ${step.color}33`,
-              }}
-            >
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                style={{
-                  background: step.color,
-                  color: 'white',
-                  fontFamily: "'Fredoka One', cursive",
-                  fontSize: '0.9rem',
-                }}
-              >
-                {step.num}
-              </div>
-              <div>
-                <p
-                  style={{
-                    fontFamily: "'Fredoka One', cursive",
-                    fontSize: '0.95rem',
-                    color: step.color,
-                    marginBottom: 2,
-                  }}
-                >
-                  {step.emoji} {step.title}
-                </p>
-                <p style={{ fontSize: '0.82rem', color: T.textSub, lineHeight: 1.6 }}>
-                  {step.desc}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={isExpanded ? { opacity: 1 } : { opacity: 0 }}
-            transition={{ delay: 0.3 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={onNavigate}
-            className="w-full py-3 rounded-2xl flex items-center justify-center gap-2 mt-2 transition-all"
-            style={{
-              background: 'linear-gradient(135deg, #7C3AED, #5B21B6)',
-              color: 'white',
-              fontFamily: "'Nunito', sans-serif",
-              fontWeight: 800,
-              fontSize: '0.92rem',
-            }}
-          >
-            <BookOpen size={16} /> Full Learning Guide
-          </motion.button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-// ─── HOW IT WORKS ─────────────────────────────────────────────────────────────
+// ─── HOW IT WORKS ───
 
 function HowItWorks({ isDark }: { isDark: boolean }) {
   const T = getTheme(isDark);
@@ -548,101 +342,7 @@ function HowItWorks({ isDark }: { isDark: boolean }) {
   );
 }
 
-// ─── ACHIEVEMENT TOAST ────────────────────────────────────────────────────────
-
-function LeaderboardTeaser({ isDark }: { isDark: boolean }) {
-  const T = getTheme(isDark);
-  const { count, bestStreak } = useStreak();
-
-  const milestones = [
-    { label: 'First solve!', target: 1, emoji: '🎉', achieved: bestStreak >= 1 },
-    { label: '3-day streak', target: 3, emoji: '🔥', achieved: count >= 3 || bestStreak >= 3 },
-    { label: '7-day streak', target: 7, emoji: '🏅', achieved: count >= 7 || bestStreak >= 7 },
-    { label: '30-day streak', target: 30, emoji: '🏆', achieved: count >= 30 || bestStreak >= 30 },
-  ];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className="max-w-2xl mx-auto px-4 pb-4"
-    >
-      <div
-        className="rounded-3xl p-6 border shadow-sm"
-        style={{ background: T.cardBg, borderColor: T.cardBorder }}
-      >
-        <div className="flex items-center gap-3 mb-5">
-          <Trophy size={22} style={{ color: '#D97706' }} />
-          <h3
-            style={{
-              fontFamily: "'Fredoka One', cursive",
-              fontSize: '1.2rem',
-              color: isDark ? '#C4B5FD' : '#1E1B4B',
-            }}
-          >
-            Your Achievements
-          </h3>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {milestones.map((m, i) => (
-            <motion.div
-              key={i}
-              whileHover={{ scale: 1.05 }}
-              className="text-center rounded-2xl p-3 border-2 transition-all"
-              style={{
-                background: m.achieved
-                  ? isDark
-                    ? '#1A0F35'
-                    : '#F5F0FF'
-                  : isDark
-                    ? '#1A1035'
-                    : '#F9F9F9',
-                borderColor: m.achieved ? '#7C3AED' : isDark ? '#3D2A6B' : '#E5E7EB',
-                opacity: m.achieved ? 1 : 0.6,
-              }}
-            >
-              <div
-                className="text-2xl mb-1"
-                style={{ filter: m.achieved ? 'none' : 'grayscale(100%)' }}
-              >
-                {m.emoji}
-              </div>
-              <p
-                style={{
-                  fontSize: '0.75rem',
-                  color: m.achieved ? '#7C3AED' : T.textMuted,
-                  fontWeight: 700,
-                  fontFamily: "'Nunito', sans-serif",
-                }}
-              >
-                {m.label}
-              </p>
-              {m.achieved && (
-                <div
-                  className="mt-1.5 rounded-full px-2 py-0.5"
-                  style={{ background: '#7C3AED', display: 'inline-block' }}
-                >
-                  <span style={{ fontSize: '0.65rem', color: 'white', fontWeight: 700 }}>
-                    EARNED
-                  </span>
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </div>
-        <p
-          className="mt-4 text-center"
-          style={{ fontSize: '0.8rem', color: T.textMuted, fontWeight: 600 }}
-        >
-          Solve daily puzzles to unlock achievements 🦉
-        </p>
-      </div>
-    </motion.div>
-  );
-}
-
-// ─── BOTTOM CTA ───────────────────────────────────────────────────────────────
+// ─── BOTTOM CTA ───
 
 function BottomCTA({ onNavigate, isDark: _isDark }: { onNavigate: () => void; isDark: boolean }) {
   return (
@@ -784,33 +484,16 @@ export function Home() {
         </header>
 
         {/* TODAY'S PUZZLE — front and centre */}
-        <TodaysPuzzleHero
-          onNavigate={() => navigate('/puzzle')}
-          isDark={isDark}
-          puzzle={todaysPuzzle}
-        />
-
-        {/* Stats strip */}
-        <StatsStrip isDark={isDark} />
-      </div>
-
-      {/* ── ACHIEVEMENTS ── */}
-      <div className="relative z-10 px-4 pt-8">
-        <LeaderboardTeaser isDark={isDark} />
-      </div>
-
-      {/* ── NEW PLAYER JOURNEY ── */}
-      <div className="relative z-10 px-4 py-4">
-        <NewPlayerJourney onNavigate={() => navigate('/learn')} isDark={isDark} />
+        <TodaysPuzzleHero onNavigate={() => navigate('/')} isDark={isDark} puzzle={todaysPuzzle} />
       </div>
 
       {/* ── HOW IT WORKS ── */}
-      <div className="relative z-10">
+      <div className="relative z-10 pt-8">
         <HowItWorks isDark={isDark} />
       </div>
 
       {/* ── BOTTOM CTA ── */}
-      <div className="relative z-10 mb-4">
+      <div className="relative z-10 my-8">
         <BottomCTA onNavigate={() => navigate('/learn')} isDark={isDark} />
       </div>
 

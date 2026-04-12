@@ -123,6 +123,9 @@ export function useStreak() {
       wrongAttempts: number = 0,
       solveTimeSeconds?: number
     ) => {
+      // Only track stats if user is logged in
+      if (!userId) return null;
+
       const today = new Date().toDateString();
       const current = getStoredStreakData();
 

@@ -81,7 +81,7 @@ function SignInGate({ isDark }: { isDark: boolean }) {
     >
       {/* Floating bg */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" aria-hidden>
-        {['H', 'I', 'S', 'T', 'O', 'R', 'Y', '?', '★'].map((char, i) => (
+        {['P', 'R', 'O', 'G', 'R', 'E', 'S', 'S', '★'].map((char, i) => (
           <motion.div
             key={i}
             className="absolute select-none"
@@ -147,7 +147,7 @@ function SignInGate({ isDark }: { isDark: boolean }) {
               marginBottom: '0.5rem',
             }}
           >
-            Unlock Your History
+            Unlock Your Progress
           </h1>
           <p
             style={{
@@ -157,7 +157,7 @@ function SignInGate({ isDark }: { isDark: boolean }) {
               lineHeight: 1.5,
             }}
           >
-            Sign in with Google to access your puzzle history, stats, and the full archive.
+            Sign in with Google to access your puzzle history, stats, and personal progress.
           </p>
 
           <div className="text-left mb-6 flex flex-col gap-2">
@@ -817,7 +817,7 @@ function SolveInsights({
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
-export function History() {
+export function Progress() {
   const { isDark } = useDarkMode();
   const T = getTheme(isDark);
   const { user, signOut, isSignedIn } = useAuth();
@@ -1134,7 +1134,7 @@ export function History() {
               marginBottom: '0.75rem',
             }}
           >
-            Solve History
+            Solve Progress
           </h3>
 
           {loading ? (
@@ -1155,10 +1155,7 @@ export function History() {
               <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🧩</div>
               <p style={{ color: T.textMuted, fontSize: '0.9rem', margin: 0 }}>
                 No solves yet — go crack{' '}
-                <a
-                  href="/puzzle"
-                  style={{ color: isDark ? '#C4B5FD' : '#7C3AED', fontWeight: 700 }}
-                >
+                <a href="/" style={{ color: isDark ? '#C4B5FD' : '#7C3AED', fontWeight: 700 }}>
                   today's puzzle
                 </a>
                 !

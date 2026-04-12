@@ -7,7 +7,7 @@ import {
   Home,
   Sun,
   Moon,
-  History,
+  Trophy,
   Lock,
   LogOut,
   Heart,
@@ -134,10 +134,10 @@ export function Root() {
   }, [location.pathname]);
 
   const navLinks = [
-    { to: '/', label: 'Home', icon: Home, requiresAuth: false },
+    { to: '/', label: "Today's Puzzle", icon: PuzzleNavIcon, requiresAuth: false },
+    { to: '/about', label: 'About', icon: Home, requiresAuth: false },
     { to: '/learn', label: 'Learn', icon: BookOpen, requiresAuth: false },
-    { to: '/puzzle', label: "Today's Puzzle", icon: PuzzleNavIcon, requiresAuth: false },
-    { to: '/history', label: 'History', icon: History, requiresAuth: true },
+    { to: '/history', label: 'Progress', icon: Trophy, requiresAuth: true },
   ];
 
   return (
@@ -194,36 +194,38 @@ export function Root() {
           {/* Right: Streak + Auth + Dark toggle + Mobile menu */}
           <div className="flex items-center gap-2">
             {/* Streak */}
-            <motion.div
-              className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 border sm:px-3"
-              style={{
-                background: T.streakBg,
-                borderColor: T.streakBorder,
-              }}
-              whileHover={{ scale: 1.05 }}
-            >
-              <span className="text-sm sm:text-base">🔥</span>
-              <span
+            {isSignedIn && (
+              <motion.div
+                className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 border sm:px-3"
                 style={{
-                  fontFamily: "'Fredoka One', cursive",
-                  fontSize: '0.9rem',
-                  color: isDark ? '#FB923C' : '#EA580C',
+                  background: T.streakBg,
+                  borderColor: T.streakBorder,
                 }}
-                className="sm:text-[1rem]"
+                whileHover={{ scale: 1.05 }}
               >
-                {streak}
-              </span>
-              <span
-                style={{
-                  fontSize: '0.65rem',
-                  color: isDark ? '#C2410C' : '#C2410C',
-                  fontWeight: 600,
-                }}
-                className="sm:text-[0.72rem]"
-              >
-                streak
-              </span>
-            </motion.div>
+                <span className="text-sm sm:text-base">🔥</span>
+                <span
+                  style={{
+                    fontFamily: "'Fredoka One', cursive",
+                    fontSize: '0.9rem',
+                    color: isDark ? '#FB923C' : '#EA580C',
+                  }}
+                  className="sm:text-[1rem]"
+                >
+                  {streak}
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.65rem',
+                    color: isDark ? '#C2410C' : '#C2410C',
+                    fontWeight: 600,
+                  }}
+                  className="sm:text-[0.72rem]"
+                >
+                  streak
+                </span>
+              </motion.div>
+            )}
 
             {/* Auth: avatar dropdown or sign-in nudge */}
             <div className="hidden md:flex">
@@ -290,7 +292,7 @@ export function Root() {
                             fontFamily: "'Nunito', sans-serif",
                           }}
                         >
-                          <History size={14} /> My History
+                          <Trophy size={14} /> My Progress
                         </NavLink>
                         <button
                           onClick={() => {

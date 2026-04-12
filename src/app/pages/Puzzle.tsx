@@ -14,6 +14,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   ExternalLink,
+  Trophy,
 } from 'lucide-react';
 import { useParams } from 'react-router';
 import { useClueReaction } from '../hooks/useClueReaction';
@@ -28,6 +29,100 @@ import {
   type DbDailyPuzzle,
   type PuzzleHint,
 } from '../../lib/supabase';
+
+// ─── ACHIEVEMENTS ─────────────────────────────────────────────────────────────
+
+function Achievements({ isDark }: { isDark: boolean }) {
+  const T = getTheme(isDark);
+  const { count, bestStreak } = useStreak();
+
+  const milestones = [
+    { label: 'First solve!', target: 1, emoji: '🎉', achieved: bestStreak >= 1 },
+    { label: '3-day streak', target: 3, emoji: '🔥', achieved: count >= 3 || bestStreak >= 3 },
+    { label: '7-day streak', target: 7, emoji: '🏅', achieved: count >= 7 || bestStreak >= 7 },
+    { label: '30-day streak', target: 30, emoji: '🏆', achieved: count >= 30 || bestStreak >= 30 },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="max-w-2xl mx-auto px-4 pb-4"
+    >
+      <div
+        className="rounded-3xl p-6 border shadow-sm"
+        style={{ background: T.cardBg, borderColor: T.cardBorder }}
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <Trophy size={22} style={{ color: '#D97706' }} />
+          <h3
+            style={{
+              fontFamily: "'Fredoka One', cursive",
+              fontSize: '1.2rem',
+              color: isDark ? '#C4B5FD' : '#1E1B4B',
+            }}
+          >
+            Your Achievements
+          </h3>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {milestones.map((m, i) => (
+            <motion.div
+              key={i}
+              whileHover={{ scale: 1.05 }}
+              className="text-center rounded-2xl p-3 border-2 transition-all"
+              style={{
+                background: m.achieved
+                  ? isDark
+                    ? '#1A0F35'
+                    : '#F5F0FF'
+                  : isDark
+                    ? '#1A1035'
+                    : '#F9F9F9',
+                borderColor: m.achieved ? '#7C3AED' : isDark ? '#3D2A6B' : '#E5E7EB',
+                opacity: m.achieved ? 1 : 0.6,
+              }}
+            >
+              <div
+                className="text-2xl mb-1"
+                style={{ filter: m.achieved ? 'none' : 'grayscale(100%)' }}
+              >
+                {m.emoji}
+              </div>
+              <p
+                style={{
+                  fontSize: '0.75rem',
+                  color: m.achieved ? '#7C3AED' : T.textMuted,
+                  fontWeight: 700,
+                  fontFamily: "'Nunito', sans-serif",
+                }}
+              >
+                {m.label}
+              </p>
+              {m.achieved && (
+                <div
+                  className="mt-1.5 rounded-full px-2 py-0.5"
+                  style={{ background: '#7C3AED', display: 'inline-block' }}
+                >
+                  <span style={{ fontSize: '0.65rem', color: 'white', fontWeight: 700 }}>
+                    EARNED
+                  </span>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+        <p
+          className="mt-4 text-center"
+          style={{ fontSize: '0.8rem', color: T.textMuted, fontWeight: 600 }}
+        >
+          Solve daily puzzles to unlock achievements 🦉
+        </p>
+      </div>
+    </motion.div>
+  );
+}
 
 // ─── PUZZLE DATA ──────────────────────────────────────────────────────────────
 
@@ -1396,7 +1491,7 @@ export function Puzzle() {
           This puzzle hasn't been published yet, or the number is incorrect.
         </p>
         <a
-          href="/puzzle"
+          href="/"
           className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold"
           style={{
             background: 'linear-gradient(135deg, #7C3AED, #5B21B6)',
@@ -1710,8 +1805,14 @@ export function Puzzle() {
 
           {/* Input + Buttons */}
           <div
-            className="rounded-3xl p-4 shadow-sm border"
-            style={{ background: T.cardBg, borderColor: T.cardBorder }}
+            className="rounded-3xl p-5 shadow-lg border-2"
+            style={{
+              background: T.cardBg,
+              borderColor: '#7C3AED',
+              boxShadow: isDark
+                ? '0 10px 30px -10px rgba(124,58,237,0.3)'
+                : '0 10px 30px -10px rgba(124,58,237,0.2)',
+            }}
           >
             <div className="flex gap-2 mb-3">
               <input
@@ -1722,27 +1823,34 @@ export function Puzzle() {
                 value={answer}
                 onChange={e => setAnswer(e.target.value.replace(/[^a-zA-Z]/g, ''))}
                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                placeholder={loading ? 'Loading…' : 'Enter your answer…'}
-                className="flex-1 py-3 px-4 rounded-2xl border-2 focus:outline-none transition-colors"
+                placeholder={loading ? 'Loading…' : 'Enter your answer ...'}
+                className="flex-1 py-4 px-4 rounded-2xl border-2 focus:outline-none transition-all"
                 style={{
                   borderColor: isDark ? '#4C3580' : '#E0E7FF',
-                  fontFamily: "'Nunito', sans-serif",
-                  fontSize: '1rem',
+                  fontFamily: "'Fredoka One', cursive",
+                  fontSize: '1.05rem',
                   color: T.text,
                   fontWeight: 700,
-                  letterSpacing: '0.1em',
-                  background: T.inputBg,
+                  letterSpacing: '0.15em',
+                  background: isDark ? '#1A1035' : '#FAFAFA',
                   textTransform: 'uppercase',
+                  textAlign: 'left',
                 }}
-                onFocus={e => (e.target.style.borderColor = '#7C3AED')}
-                onBlur={e => (e.target.style.borderColor = isDark ? '#4C3580' : '#E0E7FF')}
+                onFocus={e => {
+                  e.target.style.borderColor = '#7C3AED';
+                  e.target.style.boxShadow = '0 0 0 4px rgba(124,58,237,0.15)';
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = isDark ? '#4C3580' : '#E0E7FF';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSubmit}
                 disabled={loading || answer.length !== (activePuzzle?.letterCount || 0)}
-                className="px-5 py-3 rounded-2xl flex items-center gap-2 transition-all disabled:opacity-40"
+                className="px-6 py-3 rounded-2xl flex items-center gap-2 transition-all disabled:opacity-40 shadow-md"
                 style={{
                   background:
                     !loading && answer.length === activePuzzle?.letterCount
@@ -1760,7 +1868,7 @@ export function Puzzle() {
                   fontWeight: 800,
                 }}
               >
-                <Send size={16} />
+                <Send size={18} />
                 Submit
               </motion.button>
             </div>
@@ -1937,6 +2045,11 @@ export function Puzzle() {
           </button>
         </div>
       )}
+
+      {/* Achievements at the bottom */}
+      <div className="mt-12">
+        <Achievements isDark={isDark} />
+      </div>
     </div>
   );
 }
