@@ -1,4 +1,4 @@
-export const GEMINI_MODEL = "gemini-1.5-flash";
+export const GEMINI_MODEL = "gemini-2.5-pro";
 export const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1/models/";
 export const GEMINI_GENERATE_ACTION = ":generateContent";
 
