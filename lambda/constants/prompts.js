@@ -78,3 +78,42 @@ XIMENEAN STANDARDS:
 GOOD CLUE EXAMPLES:
 ${CLUE_EXAMPLES}
 `;
+
+export const LEXICAL_PLANNER_SYSTEM = LEXICAL_SYSTEM;
+export const LEXICAL_PLANNER_PROMPT = `Select a single high-quality English word between 4 and 10 letters suitable for a professional cryptic crossword.
+Avoid:
+- Obscure proper nouns
+- Technical jargon
+- Acronyms
+- Words with multiple spelling variants (unless common in UK English)
+
+Return ONLY valid JSON in this format:
+{
+  "answer": "UPPERCASEWORD",
+  "definition": "A clear, accurate dictionary definition",
+  "type": "anagram|charade|hidden|reversal|container|homophone|double_definition",
+  "difficulty": "easy|medium|hard"
+}`;
+
+export const CLUE_GENERATOR_SYSTEM = CLUE_SYSTEM;
+export const CLUE_GENERATOR_PROMPT = `Generate a professional British-style cryptic clue for the word "{{ANSWER}}".
+Mechanism: {{TYPE}}
+
+STRICT XIMENEAN RULES:
+1. The definition must be at the very START or very END of the clue.
+2. Use standard British cryptic indicators (e.g., "broken" for anagram, "back" for reversal).
+3. The surface reading must be a natural, elegant English sentence.
+4. Do NOT include the answer in the clue text.
+5. The wordplay must lead precisely to the letters of the answer. No "near enough".
+6. Include the letter count in parentheses at the end, e.g., " (5)".
+7. Return ONLY the final JSON object. Do not brainstorm out loud.
+
+OUTPUT FORMAT (JSON):
+{
+  "clue": "The full clue text including (length)",
+  "definition": "The exact definition portion",
+  "wordplay_summary": "Concise explanation, e.g., 'Anagram (broken) of PEARS'",
+  "clue_parts": [
+    { "text": "Part of clue", "type": "definition|indicator|fodder|link|null" }
+  ]
+}`;
