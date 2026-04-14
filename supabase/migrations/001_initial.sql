@@ -664,12 +664,26 @@ CREATE TRIGGER user_stats_set_updated_at
 
 -- ─── ROW LEVEL SECURITY ──────────────────────────────────────────────────────
 
-ALTER TABLE clues            FORCE ROW LEVEL SECURITY;
-ALTER TABLE daily_puzzles    FORCE ROW LEVEL SECURITY;
-ALTER TABLE clue_components  FORCE ROW LEVEL SECURITY;
-ALTER TABLE user_stats       FORCE ROW LEVEL SECURITY;
-ALTER TABLE solve_history    FORCE ROW LEVEL SECURITY;
-ALTER TABLE clue_reactions   FORCE ROW LEVEL SECURITY;
+-- ENABLE activates RLS for anon/authenticated roles (policies become enforced).
+-- FORCE additionally prevents the table owner / service_role from bypassing RLS.
+-- Both are required: FORCE alone does not activate RLS for regular roles.
+ALTER TABLE clues            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clues            FORCE  ROW LEVEL SECURITY;
+
+ALTER TABLE daily_puzzles    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_puzzles    FORCE  ROW LEVEL SECURITY;
+
+ALTER TABLE clue_components  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clue_components  FORCE  ROW LEVEL SECURITY;
+
+ALTER TABLE user_stats       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_stats       FORCE  ROW LEVEL SECURITY;
+
+ALTER TABLE solve_history    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE solve_history    FORCE  ROW LEVEL SECURITY;
+
+ALTER TABLE clue_reactions   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clue_reactions   FORCE  ROW LEVEL SECURITY;
 
 -- clues: readable only when the clue is scheduled in a published daily_puzzle.
 -- daily_puzzles.published is the single source of truth for visibility.
