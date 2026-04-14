@@ -1,20 +1,20 @@
-import { getAIClient } from "./clients/aiClient.js";
-import { notify } from "./core/alerts.js";
-import { generateValidClue } from "./core/pipeline.js";
-import { writeToDB } from "./services/dbService.js";
+import { getAIClient } from './clients/aiClient.js';
+import { notify } from './core/alerts.js';
+import { generateValidClue } from './core/pipeline.js';
+import { writeToDB } from './services/dbService.js';
 
 /**
  * AWS Lambda Entry Point
  * Triggers the daily cryptic clue generation pipeline.
  */
 export const handler = async (event) => {
-  const AI_PROVIDER = process.env.AI_PROVIDER || "gemini";
-  const DB_PROVIDER = process.env.DB_PROVIDER || "supabase";
+  const AI_PROVIDER = process.env.AI_PROVIDER || 'gemini';
+  const DB_PROVIDER = process.env.DB_PROVIDER || 'supabase';
   const callAI = getAIClient(AI_PROVIDER);
 
   try {
     // 1. Generate Clue
-    const { lexical, clue } = await generateValidClue(callAI, AI_PROVIDER);
+    const { lexical, clue } = await generateValidClue(callAI, AI_PROVIDER, DB_PROVIDER);
 
     // 2. Save to DB
     const result = await writeToDB(lexical, clue, AI_PROVIDER, DB_PROVIDER);
@@ -27,7 +27,8 @@ export const handler = async (event) => {
       return { statusCode: 200, body: JSON.stringify({ success: true, message: skipMsg }) };
     }
 
-    const successMessage = `Generated clue for *${lexical.answer}* (${lexical.type})\n\n"${clue.clue}"`;
+    const successMessage =
+      `Generated Puzzle #${result.puzzleNumber} for *${lexical.answer}* (${lexical.type})\n\n"${clue.clue}"`;
     await notify(successMessage, true);
 
     return {
@@ -35,13 +36,14 @@ export const handler = async (event) => {
       body: JSON.stringify({
         success: true,
         date: result.date,
+        puzzleNumber: result.puzzleNumber,
         answer: lexical.answer,
         clue: clue.clue,
         provider: AI_PROVIDER,
       }),
     };
   } catch (err) {
-    console.error("Lambda error:", err);
+    console.error('Lambda error:', err);
     await notify(`Failed to generate/insert clue:\n\`${err.message}\``, false);
 
     return {

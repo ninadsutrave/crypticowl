@@ -1,23 +1,44 @@
-import { 
-  GEMINI_MODEL, 
-  GEMINI_BASE_URL, 
-  GEMINI_GENERATE_ACTION, 
+import {
+  GEMINI_MODEL,
+  GEMINI_JUDGE_MODEL,
+  GEMINI_BASE_URL,
+  GEMINI_GENERATE_ACTION,
   GEMINI_HEADERS,
   GEMINI_CONFIG,
-  HTTP_METHODS
-} from "../../constants/gemini.js";
+  HTTP_METHODS,
+} from '../../constants/gemini.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-export async function callGemini(prompt, systemInstruction = "") {
+/**
+ * Calls a Gemini model with optional responseSchema enforcement.
+ *
+ * When responseSchema is provided:
+ *   - Gemini's JSON mode is fully enforced — the response is guaranteed to match
+ *     the schema shape, so we parse it directly without any regex extraction.
+ *
+ * When responseSchema is omitted:
+ *   - Falls back to regex extraction in case the model adds preamble text.
+ *
+ * @param {string} prompt
+ * @param {string} systemInstruction
+ * @param {object|null} responseSchema  - Gemini OpenAPI-style schema object
+ * @param {string} model                - Gemini model ID (defaults to GEMINI_MODEL)
+ */
+export async function callGemini(prompt, systemInstruction = '', responseSchema = null, model = GEMINI_MODEL) {
+  const generationConfig = { ...GEMINI_CONFIG };
+  if (responseSchema) {
+    generationConfig.responseSchema = responseSchema;
+  }
+
   const body = {
     contents: [
       {
-        role: "user",
+        role: 'user',
         parts: [{ text: prompt }],
       },
     ],
-    generationConfig: GEMINI_CONFIG,
+    generationConfig,
   };
 
   if (systemInstruction) {
@@ -26,8 +47,10 @@ export async function callGemini(prompt, systemInstruction = "") {
     };
   }
 
+  console.log(`[gemini] calling model: ${model}`);
+
   const res = await fetch(
-    `${GEMINI_BASE_URL}${GEMINI_MODEL}${GEMINI_GENERATE_ACTION}?key=${GEMINI_API_KEY}`,
+    `${GEMINI_BASE_URL}${model}${GEMINI_GENERATE_ACTION}?key=${GEMINI_API_KEY}`,
     {
       method: HTTP_METHODS.POST,
       headers: GEMINI_HEADERS,
@@ -37,28 +60,44 @@ export async function callGemini(prompt, systemInstruction = "") {
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Gemini API error: ${res.status} - ${errText}`);
+    throw new Error(`Gemini API error (${model}): ${res.status} - ${errText}`);
   }
 
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-  if (!text) throw new Error("Empty LLM response");
+  if (!text) throw new Error(`Empty Gemini response from ${model}`);
 
-  try {
-    // 1. Basic cleanup: remove markdown blocks
-    let cleanText = text.replace(/```json\n?|\n?```/g, "").trim();
-
-    // 2. Handle "AI blabbering": find the LAST valid JSON object in the string
-    const jsonMatches = [...cleanText.matchAll(/\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{[^{}]*\}))*\}))*\}/g)];
-    
-    if (jsonMatches.length > 0) {
-      const lastMatch = jsonMatches[jsonMatches.length - 1][0];
-      return JSON.parse(lastMatch);
+  // Schema-enforced: response is guaranteed valid JSON — parse directly.
+  if (responseSchema) {
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`Schema-mode JSON parse failed (${model}): ${text.substring(0, 200)}`);
     }
-
-    return JSON.parse(cleanText);
-  } catch (e) {
-    throw new Error(`Invalid JSON from Gemini: ${text.substring(0, 100)}...`);
   }
+
+  // Fallback: strip markdown fences then extract the last valid JSON object
+  // (handles cases where the model adds reasoning text before the JSON).
+  try {
+    const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+    const jsonMatches = [
+      ...cleanText.matchAll(/\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{[^{}]*\}))*\}))*\}/g),
+    ];
+    if (jsonMatches.length > 0) {
+      return JSON.parse(jsonMatches[jsonMatches.length - 1][0]);
+    }
+    return JSON.parse(cleanText);
+  } catch {
+    throw new Error(`JSON parse failed (${model}): ${text.substring(0, 200)}`);
+  }
+}
+
+/**
+ * Pre-bound variant that always calls the judge model (Gemini 3 Flash).
+ * Used by the clue judge so it evaluates with a different model than the generator,
+ * breaking the self-judging bias inherent in same-model evaluation.
+ */
+export function callGeminiFlash(prompt, systemInstruction, responseSchema) {
+  return callGemini(prompt, systemInstruction, responseSchema, GEMINI_JUDGE_MODEL);
 }

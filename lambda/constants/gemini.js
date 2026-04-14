@@ -1,4 +1,5 @@
 export const GEMINI_MODEL = "gemini-2.5-pro";
+export const GEMINI_JUDGE_MODEL = "gemini-3-flash"; // different model family — breaks self-judging bias
 export const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1/models/";
 export const GEMINI_GENERATE_ACTION = ":generateContent";
 
