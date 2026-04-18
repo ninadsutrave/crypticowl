@@ -109,13 +109,21 @@ export const handler = async (event) => {
     };
   } catch (err) {
     console.error('Lambda error:', err);
-    await notify(`Failed to generate/insert clue:\n\`${err.message}\``, false);
+
+    // Distinguish quota-exhaustion from generic failure so the alert is
+    // actionable (billing / quota bump needed vs. code/infra issue).
+    const isQuotaExhausted = err?.quotaExhausted === true;
+    const alertMessage = isQuotaExhausted
+      ? `Lambda aborted — Gemini quota exhausted:\n\`${err.message}\`\n\nRetrying this run won't help; enable paid tier or wait for the daily quota to reset.`
+      : `Failed to generate/insert clue:\n\`${err.message}\``;
+    await notify(alertMessage, false);
 
     return {
-      statusCode: 500,
+      statusCode: isQuotaExhausted ? 429 : 500,
       body: JSON.stringify({
         success: false,
         error: err.message,
+        quotaExhausted: isQuotaExhausted,
       }),
     };
   }

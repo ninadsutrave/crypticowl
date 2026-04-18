@@ -49,6 +49,49 @@ function parseRetryDelayMs(errBody) {
 }
 
 /**
+ * Detect quota-exhaustion signals that make retrying pointless within this run.
+ * Two strong signals:
+ *   1. The error message contains `limit: 0` — the project has no quota at all
+ *      for this model (free-tier cap reached, or billing not enabled).
+ *   2. A QuotaFailure violation references a per-day / per-project quota.
+ * When either fires, the lambda must abort immediately rather than burn its
+ * whole attempt budget on a quota that won't reset within the run.
+ *
+ * @param {object} errBody
+ * @returns {{ exhausted: boolean, reason?: string }}
+ */
+function detectQuotaExhaustion(errBody) {
+  const msg = String(errBody?.error?.message ?? '');
+  if (/\blimit:\s*0\b/i.test(msg)) {
+    return { exhausted: true, reason: 'Gemini reports limit: 0 — no quota available for this model.' };
+  }
+  const details = errBody?.error?.details ?? [];
+  const quotaFailure = details.find((d) => d['@type']?.endsWith('QuotaFailure'));
+  const violations = quotaFailure?.violations ?? [];
+  const daily = violations.find((v) => /PerDay/i.test(v.quotaId ?? ''));
+  if (daily) {
+    return {
+      exhausted: true,
+      reason: `Daily Gemini quota exhausted (quotaId=${daily.quotaId}). Retries will not recover.`,
+    };
+  }
+  return { exhausted: false };
+}
+
+/**
+ * Error subtype the pipeline can recognise and short-circuit on. Extending
+ * Error and tagging a flag is enough — no need for instanceof checks across
+ * module boundaries.
+ */
+class GeminiQuotaExhaustedError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'GeminiQuotaExhaustedError';
+    this.quotaExhausted = true;
+  }
+}
+
+/**
  * Calls a Gemini model with optional responseSchema enforcement.
  * Automatically retries on 429 (RESOURCE_EXHAUSTED), honouring the retryDelay
  * from the API response when present (capped at MAX_RETRY_DELAY_MS).
@@ -120,15 +163,29 @@ export async function callGemini(
   clearTimeout(timeoutId);
 
   // ── Rate-limit handling ─────────────────────────────────────────────────────
-  if (res.status === 429 && _retryCount < MAX_RATE_LIMIT_RETRIES) {
+  if (res.status === 429) {
     let errBody = null;
     try { errBody = await res.json(); } catch { /* ignore */ }
 
-    const delayMs = parseRetryDelayMs(errBody) ?? Math.min(30_000 * (1 + _retryCount), MAX_RETRY_DELAY_MS);
-    console.warn(`[gemini] 429 rate-limited on ${model}. Waiting ${(delayMs / 1000).toFixed(1)}s before retry #${_retryCount + 1}…`);
-    await sleep(delayMs);
+    // If the quota is fundamentally exhausted (daily cap, limit:0 — e.g. free
+    // tier with no remaining calls), retrying within this invocation can't
+    // recover. Throw a distinct error so the pipeline stops immediately
+    // instead of burning its retry budget.
+    const quota = detectQuotaExhaustion(errBody);
+    if (quota.exhausted) {
+      console.error(`[gemini] ${model}: ${quota.reason}`);
+      throw new GeminiQuotaExhaustedError(
+        `Gemini quota exhausted (${model}): ${quota.reason}`
+      );
+    }
 
-    return callGemini(prompt, systemInstruction, responseSchema, model, baseConfig, _retryCount + 1);
+    if (_retryCount < MAX_RATE_LIMIT_RETRIES) {
+      const delayMs = parseRetryDelayMs(errBody) ?? Math.min(30_000 * (1 + _retryCount), MAX_RETRY_DELAY_MS);
+      console.warn(`[gemini] 429 rate-limited on ${model}. Waiting ${(delayMs / 1000).toFixed(1)}s before retry #${_retryCount + 1}…`);
+      await sleep(delayMs);
+
+      return callGemini(prompt, systemInstruction, responseSchema, model, baseConfig, _retryCount + 1);
+    }
   }
 
   // ── Transient 5xx handling — exponential backoff ────────────────────────────

@@ -52,6 +52,10 @@ export async function generateValidClue(callAI, aiProvider, dbProvider) {
           `(${lexical.type}) — "${lexical.definition}"`
       );
     } catch (e) {
+      // Quota exhaustion is not transient — re-throw immediately so the
+      // lambda exits cleanly and alerts instead of burning attempts on calls
+      // that will all 429.
+      if (e?.quotaExhausted) throw e;
       console.error(`[attempt ${attempts}] Lexical selection failed:`, e.message);
       continue;
     }
@@ -104,6 +108,9 @@ export async function generateValidClue(callAI, aiProvider, dbProvider) {
         // Carry feedback into the next clue attempt.
         feedback = verdict.feedback;
       } catch (e) {
+        // Quota exhaustion — bail out of the entire pipeline. Retries cannot
+        // succeed until quota resets (e.g. next UTC day for per-day limits).
+        if (e?.quotaExhausted) throw e;
         console.error(`  Clue attempt ${clueAttempt} threw:`, e.message);
         feedback = null;
       }
