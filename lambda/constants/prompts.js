@@ -104,6 +104,14 @@ export const CLUE_RESPONSE_SCHEMA = {
 
 // ─── LEXICAL PLANNER ──────────────────────────────────────────────────────────
 
+const JSON_ONLY_RULE = `OUTPUT FORMAT (STRICT):
+- Return EXACTLY ONE valid JSON object matching the response schema.
+- No markdown fences (\`\`\`), no leading prose, no trailing prose.
+- No commentary like "here is my answer" or "let me think".
+- Every string field must be a concise plain-English string (not an array, not an object).
+- Never include line breaks inside the "clue" field.
+- If you are uncertain, still emit your best JSON answer — the downstream judge will score it; never emit an apology or explanation in its place.`;
+
 export const LEXICAL_PLANNER_SYSTEM = `You are an expert British cryptic crossword compiler with 30 years of experience setting for The Times, The Guardian, and The Telegraph.
 
 Your job is to select a single English word that is:
@@ -129,7 +137,9 @@ MECHANISM SELECTION GUIDANCE:
 - double_definition: the answer has two completely different meanings, each usable as a definition
 - cryptic_definition: the answer has a single definition phrased so cleverly or obliquely it reads like a riddle
 - andlit: the entire clue simultaneously serves as both the definition AND the wordplay (rare, advanced)
-- compound: two or more of the above mechanisms combine to produce the answer`;
+- compound: two or more of the above mechanisms combine to produce the answer
+
+${JSON_ONLY_RULE}`;
 
 /**
  * Builds the lexical planner prompt, injecting recent-usage constraints for variety.
@@ -284,7 +294,9 @@ MECHANISM-SPECIFIC RULES:
 - andlit: the entire clue is simultaneously wordplay and definition (often uses "!" in surface). Advanced — use sparingly. Set indicator_type to "".
 - compound: two or more mechanisms combined; each part must work independently. Set indicator_type to the sub-type of the PRIMARY indicator (or "" if no single indicator dominates).
 
-${CLUE_EXAMPLES}`;
+${CLUE_EXAMPLES}
+
+${JSON_ONLY_RULE}`;
 
 const CLUE_GENERATOR_PROMPT_BASE = `Generate a professional British cryptic clue for the answer "{{ANSWER}}" (length {{LENGTH}}).
 
@@ -416,7 +428,9 @@ SCORING (1–10):
 
 Set reject_lexical = true ONLY if the word and mechanism are inherently incompatible
 (e.g. the word has no valid anagram, no viable reversal, etc.) — not just because this
-particular clue attempt was poor.`;
+particular clue attempt was poor.
+
+${JSON_ONLY_RULE}`;
 
 /**
  * Builds the judge evaluation prompt.

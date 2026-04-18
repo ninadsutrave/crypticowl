@@ -8,7 +8,8 @@ export const LIGHT = {
   text: '#1E1B4B',
   textSub: '#4B5563',
   textMuted: '#6B7280',
-  textFaint: '#9CA3AF',
+  // Previous #9CA3AF on white was ~2.6:1 — fails WCAG AA. #6B7280 hits 4.8:1.
+  textFaint: '#6B7280',
   inputBg: '#F9F7FF',
   inputBorder: '#E0E7FF',
   clueBg: 'linear-gradient(135deg, #F9F7FF, #F0F9FF)',
@@ -39,7 +40,8 @@ export const DARK = {
   text: '#F0EAFF',
   textSub: '#C4B5FD',
   textMuted: '#9381CC',
-  textFaint: '#6D5FA8',
+  // Previous #6D5FA8 on dark bg dipped below 4.5:1. Lighter purple passes AA comfortably.
+  textFaint: '#A78BFA',
   inputBg: '#261845',
   inputBorder: '#4C3580',
   clueBg: 'linear-gradient(135deg, #261845, #162038)',

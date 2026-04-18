@@ -345,6 +345,8 @@ export function Root() {
                 color: isDark ? '#C4B5FD' : '#7C3AED',
               }}
               title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-pressed={isDark}
             >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span
@@ -364,6 +366,8 @@ export function Root() {
             <motion.button
               onClick={() => setMenuOpen(!menuOpen)}
               whileTap={{ scale: 0.9 }}
+              aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={menuOpen}
               className="md:hidden p-2 rounded-full transition-colors"
               style={{
                 background: menuOpen ? (isDark ? '#261845' : '#F5F0FF') : 'transparent',
@@ -478,30 +482,6 @@ export function Root() {
                       Sign in with Google
                     </NavLink>
                   )}
-                </motion.div>
-
-                {/* Dark mode toggle in mobile menu */}
-                <motion.div
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: (navLinks.length + 1) * 0.05, duration: 0.2 }}
-                >
-                  <button
-                    onClick={() => {
-                      toggleDark();
-                      setMenuOpen(false);
-                    }}
-                    className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold w-full transition-all"
-                    style={{
-                      background: isDark ? '#261845' : '#F5F0FF',
-                      color: isDark ? '#C4B5FD' : '#6D28D9',
-                      fontFamily: "'Nunito', sans-serif",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {isDark ? <Sun size={18} /> : <Moon size={18} />}
-                    {isDark ? 'Light Mode' : 'Dark Mode'}
-                  </button>
                 </motion.div>
               </div>
             </motion.div>

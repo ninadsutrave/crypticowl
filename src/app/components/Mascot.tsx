@@ -281,18 +281,19 @@ export function Mascot({
   return (
     <div className="relative inline-flex items-center">
       {speechBubble && bubbleDirection === 'left' && (
-        <div className="absolute right-full mr-3 bottom-4 z-10">
+        <div className="absolute right-full mr-2 sm:mr-3 bottom-1 sm:bottom-4 z-10">
           <div
-            className="relative bg-white border-2 border-[#C4B5FD] rounded-2xl px-4 py-3 shadow-lg max-w-[200px]"
+            className="relative bg-white border-2 border-[#C4B5FD] rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-lg max-w-[140px] sm:max-w-[200px]"
             style={{ borderRadius: '18px 18px 4px 18px' }}
           >
             <p
               style={{
                 fontFamily: "'Nunito', sans-serif",
-                fontSize: '0.82rem',
+                fontSize: '0.75rem',
+                lineHeight: '1.35',
                 color: '#4C1D95',
-                lineHeight: '1.4',
               }}
+              className="sm:text-[0.82rem]"
             >
               {speechBubble}
             </p>
@@ -310,18 +311,19 @@ export function Mascot({
       </motion.div>
 
       {speechBubble && bubbleDirection === 'right' && (
-        <div className="absolute left-full ml-3 bottom-4 z-10">
+        <div className="absolute left-full ml-2 sm:ml-3 bottom-1 sm:bottom-4 z-10">
           <div
-            className="relative bg-white border-2 border-[#C4B5FD] rounded-2xl px-4 py-3 shadow-lg max-w-[220px]"
+            className="relative bg-white border-2 border-[#C4B5FD] rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-lg max-w-[140px] sm:max-w-[220px]"
             style={{ borderRadius: '18px 18px 18px 4px' }}
           >
             <p
               style={{
                 fontFamily: "'Nunito', sans-serif",
-                fontSize: '0.82rem',
+                fontSize: '0.75rem',
+                lineHeight: '1.35',
                 color: '#4C1D95',
-                lineHeight: '1.4',
               }}
+              className="sm:text-[0.82rem]"
             >
               {speechBubble}
             </p>

@@ -91,18 +91,19 @@ const CLUE_SEGMENTS = [
 // ─── COMPONENTS ───────────────────────────────────────────────────────────────
 
 function LetterBox({ letter, color, small }: { letter: string; color: string; small?: boolean }) {
+  // Mobile-first sizing: tighter on small screens so long hidden-word examples
+  // (10+ letters) don't overflow the viewport.
+  const sizeClass = small
+    ? 'w-6 h-6 sm:w-7 sm:h-7 text-[0.75rem] sm:text-[0.85rem]'
+    : 'w-7 h-7 sm:w-9 sm:h-9 text-[0.85rem] sm:text-base';
   return (
     <div
-      className="rounded-xl flex items-center justify-center font-bold"
+      className={`rounded-xl flex items-center justify-center font-bold flex-shrink-0 ${sizeClass}`}
       style={{
-        width: small ? 28 : 36,
-        height: small ? 28 : 36,
         background: color + '22',
         border: `2px solid ${color}`,
         color,
         fontFamily: "'Fredoka One', cursive",
-        fontSize: small ? '0.85rem' : '1rem',
-        flexShrink: 0,
       }}
     >
       {letter}
@@ -318,13 +319,14 @@ function WordplayTab({ type, isDark }: { type: WordplayType; isDark: boolean }) 
           })}
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex gap-1.5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-3 sm:gap-2">
+          <div className="flex gap-1 sm:gap-1.5 flex-wrap">
             {type.visual.map((l: string, i: number) => (
               <LetterBox key={i} letter={l} color={type.color} />
             ))}
           </div>
           <span
+            className="hidden sm:inline"
             style={{
               color: type.color,
               fontFamily: "'Fredoka One', cursive",
@@ -334,20 +336,36 @@ function WordplayTab({ type, isDark }: { type: WordplayType; isDark: boolean }) 
           >
             →
           </span>
-          <div className="flex gap-1.5">
-            {type.visualAnswer.map((l: string, i: number) => (
-              <LetterBox key={i} letter={l} color="#059669" />
-            ))}
-          </div>
-          <div
-            className="rounded-full px-3 py-1 ml-1"
-            style={{ background: isDark ? '#062010' : '#ECFDF5', border: '1.5px solid #34D399' }}
+          <span
+            className="sm:hidden self-center"
+            style={{
+              color: type.color,
+              fontFamily: "'Fredoka One', cursive",
+              fontSize: '1.2rem',
+            }}
           >
-            <span
-              style={{ fontFamily: "'Fredoka One', cursive", color: '#059669', fontSize: '0.9rem' }}
+            ↓
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex gap-1 sm:gap-1.5 flex-wrap">
+              {type.visualAnswer.map((l: string, i: number) => (
+                <LetterBox key={i} letter={l} color="#059669" />
+              ))}
+            </div>
+            <div
+              className="rounded-full px-3 py-1"
+              style={{ background: isDark ? '#062010' : '#ECFDF5', border: '1.5px solid #34D399' }}
             >
-              {type.answer}
-            </span>
+              <span
+                style={{
+                  fontFamily: "'Fredoka One', cursive",
+                  color: '#059669',
+                  fontSize: '0.9rem',
+                }}
+              >
+                {type.answer}
+              </span>
+            </div>
           </div>
         </div>
       </div>

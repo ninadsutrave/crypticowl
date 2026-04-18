@@ -2,6 +2,13 @@ import { buildJudgePrompt, JUDGE_SYSTEM, JUDGE_RESPONSE_SCHEMA } from '../../con
 import { callGeminiFlash } from '../../clients/providers/gemini.js';
 
 /**
+ * Quality threshold for shipping a clue. Flash must return score ≥ this AND
+ * both valid === true AND wordplay_correct === true. Exported so the pipeline
+ * and any downstream code reference the same source of truth.
+ */
+export const MIN_QUALITY_SCORE = 7;
+
+/**
  * Validates a generated clue in two stages.
  *
  * Stage 1 — Fast structural checks (no AI call):
@@ -36,12 +43,42 @@ export async function judgeClue(clue, lexical) {
 
   // ── Stage 1: Structural checks ───────────────────────────────────────────────
 
-  // 1a. Core fields
-  if (!clue.clue || !clue.definition) {
+  // 1a. Core fields — reject non-string, empty, and whitespace-only values.
+  // Gemini JSON mode enforces the shape but nothing else; empty strings slip through.
+  const isMeaningfulString = (v) => typeof v === 'string' && v.trim().length > 0;
+  if (!isMeaningfulString(clue.clue) || !isMeaningfulString(clue.definition)) {
     return {
       valid: false,
       score: 0,
-      feedback: 'Missing core fields (clue or definition).',
+      feedback: 'Missing or empty core fields (clue or definition).',
+      rejectLexical: false,
+    };
+  }
+  // clue_parts must be a real populated array (schema says "ARRAY" but allows empty).
+  if (!Array.isArray(clue.clue_parts) || clue.clue_parts.length === 0) {
+    return {
+      valid: false,
+      score: 0,
+      feedback: 'Missing clue_parts breakdown.',
+      rejectLexical: false,
+    };
+  }
+  // Each clue_parts item needs a non-empty text field.
+  const badPart = clue.clue_parts.find((p) => !p || !isMeaningfulString(p.text));
+  if (badPart) {
+    return {
+      valid: false,
+      score: 0,
+      feedback: 'clue_parts contains an empty or malformed segment.',
+      rejectLexical: false,
+    };
+  }
+  // Guard against absurd clue_parts count that would suggest the model lost control.
+  if (clue.clue_parts.length > 30) {
+    return {
+      valid: false,
+      score: 0,
+      feedback: `clue_parts has ${clue.clue_parts.length} segments — implausible for a cryptic clue.`,
       rejectLexical: false,
     };
   }
@@ -186,7 +223,14 @@ export async function judgeClue(clue, lexical) {
   }
 
   // Threshold: 7+ = "high quality, minor polish needed"
-  const valid = judgeResult.valid && judgeResult.wordplay_correct && judgeResult.score >= 7;
+  // Gate: Flash must affirmatively approve AND confirm wordplay correctness
+  // AND score must meet our threshold. If ANY fail → clue is rejected → the
+  // pipeline retries with feedback → nothing lands in the DB.
+  const valid =
+    judgeResult.valid === true &&
+    judgeResult.wordplay_correct === true &&
+    typeof judgeResult.score === 'number' &&
+    judgeResult.score >= MIN_QUALITY_SCORE;
 
   return {
     valid,

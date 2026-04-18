@@ -125,63 +125,83 @@ function Achievements({ isDark }: { isDark: boolean }) {
   );
 }
 
-// ─── PUZZLE DATA ──────────────────────────────────────────────────────────────
+// ─── PUZZLE TYPES ─────────────────────────────────────────────────────────────
 
-const PUZZLE = {
-  number: 42,
-  clue: 'Pears mixed up to form a weapon (5)',
-  answer: 'SPEAR',
-  letterCount: 5,
-  hints: [
-    {
-      id: 1,
-      title: 'Definition Location',
-      text: 'The definition is at the end of the clue.',
-      highlight: 'a weapon',
-      mascotComment:
-        'The definition is always at the start or end of a cryptic clue. Look at the end! 👀',
-      color: '#3B82F6',
-      bg: '#EFF6FF',
-      bgDark: '#0D1F35',
-      border: '#93C5FD',
-    },
-    {
-      id: 2,
-      title: 'Spot the Indicator',
-      text: '"Mixed up" is an anagram indicator! That means some letters need to be rearranged.',
-      highlight: 'mixed up',
-      mascotComment: '"Mixed up" signals an anagram — letters are getting scrambled! 🔀',
-      color: '#7C3AED',
-      bg: '#F5F3FF',
-      bgDark: '#1A0F35',
-      border: '#C4B5FD',
-    },
-    {
-      id: 3,
-      title: 'Find the Fodder',
-      text: '"PEARS" is the fodder — these are the letters you need to rearrange!',
-      highlight: 'Pears',
-      mascotComment: 'P-E-A-R-S... these are your building blocks! Try shuffling them around! ✨',
-      color: '#F97316',
-      bg: '#FFF7ED',
-      bgDark: '#2A1505',
-      border: '#FED7AA',
-    },
-    {
-      id: 4,
-      title: 'Full Breakdown',
-      text: 'Rearrange the letters of PEARS to get a 5-letter weapon. Think of a long pointed weapon used by knights...',
-      highlight: null,
-      mascotComment: "You've got all the pieces! P-E-A-R-S → _ _ _ _ _ 🎯",
-      color: '#059669',
-      bg: '#ECFDF5',
-      bgDark: '#062010',
-      border: '#6EE7B7',
-    },
-  ],
-};
+/**
+ * A progressive hint card as rendered on the frontend. camelCase field names
+ * mirror the shape `buildHintsFromComponents` returns, which is distinct from
+ * the snake_case `PuzzleHint` persisted as JSONB in the DB.
+ */
+interface PuzzleHintCard {
+  id: number;
+  title: string;
+  text: string;
+  highlight: string | null;
+  mascotComment: string;
+  color: string;
+  bg: string;
+  bgDark: string;
+  border: string;
+}
 
-const CLUE_PARTS = [
+/** One coloured segment of the clue, as rendered in the breakdown view. */
+interface CluePartSegment {
+  text: string;
+  type: string | null;
+}
+
+// ─── FALLBACK PUZZLE ──────────────────────────────────────────────────────────
+// Shown when the DB has no puzzle for today's date, so users always see a
+// playable clue rather than an empty state.
+const FALLBACK_HINTS: PuzzleHintCard[] = [
+  {
+    id: 1,
+    title: 'Definition Location',
+    text: 'The definition is at the end of the clue.',
+    highlight: 'a weapon',
+    mascotComment:
+      'The definition is always at the start or end of a cryptic clue. Look at the end! 👀',
+    color: '#3B82F6',
+    bg: '#EFF6FF',
+    bgDark: '#0D1F35',
+    border: '#93C5FD',
+  },
+  {
+    id: 2,
+    title: 'Spot the Indicator',
+    text: '"Mixed up" is an anagram indicator! That means some letters need to be rearranged.',
+    highlight: 'mixed up',
+    mascotComment: '"Mixed up" signals an anagram — letters are getting scrambled! 🔀',
+    color: '#7C3AED',
+    bg: '#F5F3FF',
+    bgDark: '#1A0F35',
+    border: '#C4B5FD',
+  },
+  {
+    id: 3,
+    title: 'Find the Fodder',
+    text: '"PEARS" is the fodder — these are the letters you need to rearrange!',
+    highlight: 'Pears',
+    mascotComment: 'P-E-A-R-S... these are your building blocks! Try shuffling them around! ✨',
+    color: '#F97316',
+    bg: '#FFF7ED',
+    bgDark: '#2A1505',
+    border: '#FED7AA',
+  },
+  {
+    id: 4,
+    title: 'Full Breakdown',
+    text: 'Rearrange the letters of PEARS to get a 5-letter weapon. Think of a long pointed weapon used by knights...',
+    highlight: null,
+    mascotComment: "You've got all the pieces! P-E-A-R-S → _ _ _ _ _ 🎯",
+    color: '#059669',
+    bg: '#ECFDF5',
+    bgDark: '#062010',
+    border: '#6EE7B7',
+  },
+];
+
+const FALLBACK_CLUE_PARTS: CluePartSegment[] = [
   { text: 'Pears', type: 'fodder' },
   { text: ' mixed up ', type: 'indicator' },
   { text: 'to form ', type: null },
@@ -450,7 +470,7 @@ function HintCard({
   isNew,
   isDark,
 }: {
-  hint: (typeof PUZZLE.hints)[0];
+  hint: PuzzleHintCard;
   index: number;
   isNew: boolean;
   isDark: boolean;
@@ -1271,6 +1291,7 @@ function WrongFeedback({
       </div>
       <button
         onClick={onDismiss}
+        aria-label="Dismiss wrong-answer feedback"
         style={{ color: '#FDA4AF' }}
         className="hover:text-[#FB7185] transition-colors mt-0.5"
       >
@@ -1324,8 +1345,8 @@ interface ActivePuzzle {
   clue: string;
   answer: string;
   letterCount: number;
-  hints: typeof PUZZLE.hints;
-  clueParts: typeof CLUE_PARTS;
+  hints: PuzzleHintCard[];
+  clueParts: CluePartSegment[];
   date?: string;
   author?: string | null;
   authorSocial?: string | null;
@@ -1399,7 +1420,7 @@ function buildHintsFromComponents(
   components: DbDailyPuzzle['clue_components'],
   primaryType: ClueWordplayType,
   legacyHints: PuzzleHint[]
-): typeof PUZZLE.hints {
+): PuzzleHintCard[] {
   // Fall back to legacy JSONB hints if the lambda hasn't written components yet
   if (!components || components.length === 0) {
     if (legacyHints.length > 0) {
@@ -1621,14 +1642,14 @@ function mapDbPuzzle(p: DbDailyPuzzle): ActivePuzzle {
   };
 }
 
+// Shown when the DB has no puzzle for today — so users always land on a playable clue.
 const DEFAULT_PUZZLE: ActivePuzzle = {
-  id: undefined,
-  number: PUZZLE.number,
-  clue: PUZZLE.clue,
-  answer: PUZZLE.answer,
-  letterCount: PUZZLE.letterCount,
-  hints: PUZZLE.hints,
-  clueParts: CLUE_PARTS,
+  number: 42,
+  clue: 'Pears mixed up to form a weapon (5)',
+  answer: 'SPEAR',
+  letterCount: 5,
+  hints: FALLBACK_HINTS,
+  clueParts: FALLBACK_CLUE_PARTS,
 };
 
 // ─── MAIN PUZZLE PAGE ─────────────────────────────────────────────────────────
@@ -1687,7 +1708,8 @@ export function Puzzle() {
           // Cache for the rest of the day
           localStorage.setItem(cacheKey, JSON.stringify(p));
         } else {
-          // Fallback to hardcoded if DB is empty/unconfigured
+          // No puzzle in the DB yet — fall back to the built-in sample so
+          // users always have something to play.
           setActivePuzzle(DEFAULT_PUZZLE);
           setStartTime(Date.now());
         }
@@ -1770,6 +1792,7 @@ export function Puzzle() {
             color: 'white',
             fontFamily: "'Nunito', sans-serif",
             fontWeight: 800,
+            textDecoration: 'none',
           }}
         >
           ← Play Today's Puzzle
@@ -2127,6 +2150,7 @@ export function Puzzle() {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSubmit}
                 disabled={loading || answer.length !== (activePuzzle?.letterCount || 0)}
+                aria-label="Submit answer"
                 className="px-3 sm:px-6 py-3 rounded-2xl flex items-center gap-2 transition-all disabled:opacity-40 shadow-md shrink-0"
                 style={{
                   background:
@@ -2270,58 +2294,6 @@ export function Puzzle() {
             wasRevealed={wasRevealed}
           />
         )
-      )}
-
-      {/* Mobile sticky input bar */}
-      {!isCorrect && (
-        <div
-          className="md:hidden fixed bottom-0 left-0 right-0 p-3 border-t flex gap-2 z-40"
-          style={{
-            background: T.mobileBarBg,
-            backdropFilter: 'blur(12px)',
-            borderColor: T.cardBorder,
-          }}
-        >
-          <input
-            type="text"
-            disabled={loading}
-            maxLength={activePuzzle?.letterCount || 0}
-            value={answer}
-            onChange={e => setAnswer(e.target.value.replace(/[^a-zA-Z]/g, ''))}
-            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            placeholder={loading ? '…' : 'Answer…'}
-            className="flex-1 py-3 px-4 rounded-2xl border-2 focus:outline-none"
-            style={{
-              borderColor: isDark ? '#4C3580' : '#E0E7FF',
-              fontFamily: "'Nunito', sans-serif",
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              textTransform: 'uppercase',
-              background: T.inputBg,
-              color: T.text,
-            }}
-          />
-          <button
-            onClick={handleSubmit}
-            disabled={loading || answer.length !== (activePuzzle?.letterCount || 0)}
-            className="px-4 py-3 rounded-2xl disabled:opacity-40"
-            style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', color: 'white' }}
-          >
-            <Send size={18} />
-          </button>
-          <button
-            onClick={handleHint}
-            disabled={loading || hintsUnlocked >= (activePuzzle?.hints.length || 0)}
-            className="px-4 py-3 rounded-2xl disabled:opacity-40"
-            style={{
-              background: isDark ? '#2A1505' : '#FFF7ED',
-              border: `2px solid ${isDark ? '#92400E' : '#FED7AA'}`,
-              color: '#C2410C',
-            }}
-          >
-            <Lightbulb size={18} />
-          </button>
-        </div>
       )}
 
       {/* Achievements at the bottom */}
