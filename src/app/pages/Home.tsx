@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { motion } from 'motion/react';
+import { m } from 'motion/react';
 import { Mascot } from '../components/Mascot';
 import { Zap, Star, Send, Clock } from 'lucide-react';
 import { useDarkMode } from '../context/DarkModeContext';
@@ -26,7 +26,7 @@ function FloatingBg({ isDark }: { isDark: boolean }) {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" aria-hidden>
       {FLOAT_ITEMS.map((item, i) => (
-        <motion.div
+        <m.div
           key={i}
           className="absolute select-none"
           style={{
@@ -46,7 +46,7 @@ function FloatingBg({ isDark }: { isDark: boolean }) {
           }}
         >
           {item.char}
-        </motion.div>
+        </m.div>
       ))}
     </div>
   );
@@ -126,7 +126,7 @@ function TodaysPuzzleHero({
   });
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.1 }}
@@ -204,7 +204,7 @@ function TodaysPuzzleHero({
           {/* Answer boxes preview */}
           <div className="flex gap-2 justify-center mb-6">
             {[...Array(puzzle.letterCount)].map((_, i) => (
-              <motion.div
+              <m.div
                 key={i}
                 initial={{ scale: 0, rotate: -10 }}
                 animate={{ scale: 1, rotate: 0 }}
@@ -226,12 +226,12 @@ function TodaysPuzzleHero({
                 >
                   ?
                 </span>
-              </motion.div>
+              </m.div>
             ))}
           </div>
 
           {/* CTA Button */}
-          <motion.button
+          <m.button
             whileHover={{ scale: 1.03, y: -1 }}
             whileTap={{ scale: 0.97 }}
             onClick={onNavigate}
@@ -245,7 +245,7 @@ function TodaysPuzzleHero({
             }}
           >
             <Zap size={19} /> Solve Today's Clue
-          </motion.button>
+          </m.button>
 
           {/* Next puzzle countdown */}
           <div className="mt-4 flex justify-center">
@@ -253,7 +253,7 @@ function TodaysPuzzleHero({
           </div>
         </div>
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -302,7 +302,7 @@ function HowItWorks({ isDark }: { isDark: boolean }) {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {steps.map((step, i) => (
-          <motion.div
+          <m.div
             key={i}
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -335,7 +335,7 @@ function HowItWorks({ isDark }: { isDark: boolean }) {
               {step.title}
             </h3>
             <p style={{ fontSize: '0.83rem', color: T.textMuted, lineHeight: 1.6 }}>{step.desc}</p>
-          </motion.div>
+          </m.div>
         ))}
       </div>
     </div>
@@ -348,7 +348,7 @@ function BottomCTA({ onNavigate, isDark: _isDark }: { onNavigate: () => void; is
   return (
     <div className="relative z-10 px-4 pb-4">
       <div className="max-w-2xl mx-auto">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -398,7 +398,7 @@ function BottomCTA({ onNavigate, isDark: _isDark }: { onNavigate: () => void; is
               Start Learning →
             </button>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </div>
   );
@@ -500,7 +500,7 @@ export function Home() {
       {/* ── SUBMISSION PROMPT: At the very end ── */}
       <div className="relative z-10 max-w-4xl mx-auto px-4 pb-4">
         {!isSignedIn ? (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
@@ -532,7 +532,7 @@ export function Home() {
                 </p>
               </div>
             </div>
-            <motion.button
+            <m.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate('/history')}
@@ -540,10 +540,10 @@ export function Home() {
               style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)' }}
             >
               Sign In to Start
-            </motion.button>
-          </motion.div>
+            </m.button>
+          </m.div>
         ) : (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -576,15 +576,15 @@ export function Home() {
                 </p>
               </div>
             </div>
-            <motion.button
+            <m.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="px-6 py-3 rounded-2xl font-bold text-white whitespace-nowrap"
               style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)' }}
             >
               Submit Now
-            </motion.button>
-          </motion.div>
+            </m.button>
+          </m.div>
         )}
       </div>
     </div>

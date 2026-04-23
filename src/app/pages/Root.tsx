@@ -13,7 +13,7 @@ import {
   Heart,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { useDarkMode } from '../context/DarkModeContext';
 import { getTheme } from '../theme';
 import { useStreak } from '../hooks/useStreak';
@@ -49,7 +49,7 @@ function LikeButton({ isDark }: { isDark: boolean }) {
   const activePurple = isDark ? '#A78BFA' : '#7C3AED';
 
   return (
-    <motion.button
+    <m.button
       onClick={toggleLike}
       whileHover={!liked ? { scale: 1.05 } : {}}
       whileTap={!liked ? { scale: 0.95 } : {}}
@@ -75,7 +75,7 @@ function LikeButton({ isDark }: { isDark: boolean }) {
           {totalLikes}
         </span>
       </span>
-    </motion.button>
+    </m.button>
   );
 }
 
@@ -195,7 +195,7 @@ export function Root() {
           <div className="flex items-center gap-2">
             {/* Streak */}
             {isSignedIn && (
-              <motion.div
+              <m.div
                 className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 border sm:px-3"
                 style={{
                   background: T.streakBg,
@@ -224,14 +224,14 @@ export function Root() {
                 >
                   streak
                 </span>
-              </motion.div>
+              </m.div>
             )}
 
             {/* Auth: avatar dropdown or sign-in nudge */}
             <div className="hidden md:flex">
               {isSignedIn && user ? (
                 <div className="relative" ref={avatarRef}>
-                  <motion.button
+                  <m.button
                     onClick={() => setAvatarDropdown(v => !v)}
                     whileHover={{ scale: 1.08 }}
                     whileTap={{ scale: 0.92 }}
@@ -244,11 +244,11 @@ export function Root() {
                       className="w-8 h-8 rounded-full block"
                       style={{ border: `2px solid ${isDark ? '#4C3580' : '#C4B5FD'}` }}
                     />
-                  </motion.button>
+                  </m.button>
 
                   <AnimatePresence>
                     {avatarDropdown && (
-                      <motion.div
+                      <m.div
                         initial={{ opacity: 0, scale: 0.92, y: -6 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.92, y: -6 }}
@@ -310,13 +310,13 @@ export function Root() {
                         >
                           <LogOut size={14} /> Sign out
                         </button>
-                      </motion.div>
+                      </m.div>
                     )}
                   </AnimatePresence>
                 </div>
               ) : (
                 <NavLink to="/history" className="no-underline">
-                  <motion.div
+                  <m.div
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border"
                     style={{
                       background: isDark ? '#261845' : '#F5F0FF',
@@ -328,13 +328,13 @@ export function Root() {
                     whileTap={{ scale: 0.95 }}
                   >
                     Sign in
-                  </motion.div>
+                  </m.div>
                 </NavLink>
               )}
             </div>
 
             {/* Dark mode toggle */}
-            <motion.button
+            <m.button
               onClick={toggleDark}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -349,7 +349,7 @@ export function Root() {
               aria-pressed={isDark}
             >
               <AnimatePresence mode="wait" initial={false}>
-                <motion.span
+                <m.span
                   key={isDark ? 'moon' : 'sun'}
                   initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
                   animate={{ rotate: 0, opacity: 1, scale: 1 }}
@@ -358,12 +358,12 @@ export function Root() {
                   className="flex"
                 >
                   {isDark ? <Sun size={18} /> : <Moon size={18} />}
-                </motion.span>
+                </m.span>
               </AnimatePresence>
-            </motion.button>
+            </m.button>
 
             {/* Mobile hamburger */}
-            <motion.button
+            <m.button
               onClick={() => setMenuOpen(!menuOpen)}
               whileTap={{ scale: 0.9 }}
               aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
@@ -375,7 +375,7 @@ export function Root() {
               }}
             >
               <AnimatePresence mode="wait" initial={false}>
-                <motion.span
+                <m.span
                   key={menuOpen ? 'close' : 'open'}
                   initial={{ rotate: -90, opacity: 0 }}
                   animate={{ rotate: 0, opacity: 1 }}
@@ -384,16 +384,16 @@ export function Root() {
                   className="flex"
                 >
                   {menuOpen ? <X size={20} /> : <Menu size={20} />}
-                </motion.span>
+                </m.span>
               </AnimatePresence>
-            </motion.button>
+            </m.button>
           </div>
         </div>
 
         {/* Mobile Menu — animated */}
         <AnimatePresence>
           {menuOpen && (
-            <motion.div
+            <m.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
@@ -404,7 +404,7 @@ export function Root() {
               <div className="px-4 py-3 flex flex-col gap-1">
                 {/* Nav links */}
                 {navLinks.map(({ to, label, icon: Icon, requiresAuth }, i) => (
-                  <motion.div
+                  <m.div
                     key={to}
                     initial={{ opacity: 0, x: -16 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -428,11 +428,11 @@ export function Root() {
                         <Lock size={13} style={{ marginLeft: 'auto', opacity: 0.5 }} />
                       )}
                     </NavLink>
-                  </motion.div>
+                  </m.div>
                 ))}
 
                 {/* Auth row */}
-                <motion.div
+                <m.div
                   initial={{ opacity: 0, x: -16 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: navLinks.length * 0.05, duration: 0.2 }}
@@ -482,9 +482,9 @@ export function Root() {
                       Sign in with Google
                     </NavLink>
                   )}
-                </motion.div>
+                </m.div>
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </nav>

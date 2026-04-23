@@ -1,4 +1,4 @@
-import { motion } from 'motion/react';
+import { m } from 'motion/react';
 
 export type MascotMood = 'default' | 'thinking' | 'celebrating' | 'hint' | 'wrong' | 'correct';
 
@@ -301,14 +301,14 @@ export function Mascot({
         </div>
       )}
 
-      <motion.div
+      <m.div
         style={{ width: size, height: size }}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         animate={bounceAnimation as any}
         className="flex-shrink-0"
       >
         <OwlSVG mood={mood} />
-      </motion.div>
+      </m.div>
 
       {speechBubble && bubbleDirection === 'right' && (
         <div className="absolute left-full ml-2 sm:ml-3 bottom-1 sm:bottom-4 z-10">

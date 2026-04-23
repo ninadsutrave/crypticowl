@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { Mascot, MascotMood } from '../components/Mascot';
 import {
   Lightbulb,
@@ -45,7 +45,7 @@ function Achievements({ isDark }: { isDark: boolean }) {
   ];
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -68,40 +68,40 @@ function Achievements({ isDark }: { isDark: boolean }) {
           </h3>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {milestones.map((m, i) => (
-            <motion.div
+          {milestones.map((ms, i) => (
+            <m.div
               key={i}
               whileHover={{ scale: 1.05 }}
               className="text-center rounded-2xl p-3 border-2 transition-all"
               style={{
-                background: m.achieved
+                background: ms.achieved
                   ? isDark
                     ? '#1A0F35'
                     : '#F5F0FF'
                   : isDark
                     ? '#1A1035'
                     : '#F9F9F9',
-                borderColor: m.achieved ? '#7C3AED' : isDark ? '#3D2A6B' : '#E5E7EB',
-                opacity: m.achieved ? 1 : 0.6,
+                borderColor: ms.achieved ? '#7C3AED' : isDark ? '#3D2A6B' : '#E5E7EB',
+                opacity: ms.achieved ? 1 : 0.6,
               }}
             >
               <div
                 className="text-2xl mb-1"
-                style={{ filter: m.achieved ? 'none' : 'grayscale(100%)' }}
+                style={{ filter: ms.achieved ? 'none' : 'grayscale(100%)' }}
               >
-                {m.emoji}
+                {ms.emoji}
               </div>
               <p
                 style={{
                   fontSize: '0.75rem',
-                  color: m.achieved ? '#7C3AED' : T.textMuted,
+                  color: ms.achieved ? '#7C3AED' : T.textMuted,
                   fontWeight: 700,
                   fontFamily: "'Nunito', sans-serif",
                 }}
               >
-                {m.label}
+                {ms.label}
               </p>
-              {m.achieved && (
+              {ms.achieved && (
                 <div
                   className="mt-1.5 rounded-full px-2 py-0.5"
                   style={{ background: '#7C3AED', display: 'inline-block' }}
@@ -111,7 +111,7 @@ function Achievements({ isDark }: { isDark: boolean }) {
                   </span>
                 </div>
               )}
-            </motion.div>
+            </m.div>
           ))}
         </div>
         <p
@@ -121,7 +121,7 @@ function Achievements({ isDark }: { isDark: boolean }) {
           Solve daily puzzles to unlock achievements 🦉
         </p>
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -277,7 +277,7 @@ function ClueReactionWidget({
   const buttons = (
     <div className="flex items-center gap-2">
       {/* 👍 */}
-      <motion.button
+      <m.button
         onClick={() => handleVote('like')}
         whileHover={{ scale: 1.12 }}
         whileTap={{ scale: 0.88 }}
@@ -291,10 +291,10 @@ function ClueReactionWidget({
         aria-pressed={likeActive}
       >
         <ThumbsUp size={14} />
-      </motion.button>
+      </m.button>
 
       {/* 👎 */}
-      <motion.button
+      <m.button
         onClick={() => handleVote('dislike')}
         whileHover={{ scale: 1.12 }}
         whileTap={{ scale: 0.88 }}
@@ -308,12 +308,12 @@ function ClueReactionWidget({
         aria-pressed={dislikeActive}
       >
         <ThumbsDown size={14} />
-      </motion.button>
+      </m.button>
 
       {/* Thank-you flash */}
       <AnimatePresence>
         {flash && (
-          <motion.span
+          <m.span
             key="thanks"
             initial={{ opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
@@ -327,7 +327,7 @@ function ClueReactionWidget({
             }}
           >
             {flash === 'like' ? 'Thanks! 🙏' : 'Noted! 📝'}
-          </motion.span>
+          </m.span>
         )}
       </AnimatePresence>
     </div>
@@ -335,7 +335,7 @@ function ClueReactionWidget({
 
   if (variant === 'card') {
     return (
-      <motion.div
+      <m.div
         className="rounded-3xl border p-4"
         style={{ background: T.cardBg, borderColor: T.cardBorder }}
         initial={{ opacity: 0, y: 12 }}
@@ -356,7 +356,7 @@ function ClueReactionWidget({
           </p>
           {buttons}
         </div>
-      </motion.div>
+      </m.div>
     );
   }
 
@@ -476,7 +476,7 @@ function HintCard({
   isDark: boolean;
 }) {
   return (
-    <motion.div
+    <m.div
       initial={isNew ? { opacity: 0, y: 20, scale: 0.95 } : { opacity: 1, y: 0, scale: 1 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: 'spring', stiffness: 300, damping: 24 }}
@@ -538,7 +538,7 @@ function HintCard({
           </p>
         </div>
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -687,7 +687,7 @@ function SuccessState({
   const levelTitle = getLevelTitle(displayData.level);
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 280, damping: 24 }}
@@ -704,7 +704,7 @@ function SuccessState({
             animate
           />
         </div>
-        <motion.div
+        <m.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.3, type: 'spring', stiffness: 300 }}
@@ -734,11 +734,11 @@ function SuccessState({
                   ? 'Solved with just 1 hint. Impressive!'
                   : `Solved with ${hintsUsed} hints. Great effort!`}
           </p>
-        </motion.div>
+        </m.div>
       </div>
 
       {/* ── 1. SHARE CARD ── shown immediately after the header ── */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.35, duration: 0.4 }}
@@ -908,7 +908,7 @@ function SuccessState({
           </div>
 
           {/* Share / Copy button */}
-          <motion.button
+          <m.button
             onClick={handleShare}
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.97 }}
@@ -939,12 +939,12 @@ function SuccessState({
                 <Copy size={17} /> Copy &amp; share result
               </>
             )}
-          </motion.button>
+          </m.button>
         </div>
-      </motion.div>
+      </m.div>
 
       {/* ── 2. XP + STATS ── */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.45, type: 'spring', stiffness: 400 }}
@@ -986,16 +986,13 @@ function SuccessState({
           </>
         ) : (
           <>
-            <motion.div
-              animate={{ scale: [1, 1.15, 1] }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-            >
+            <m.div animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 0.5, delay: 0.6 }}>
               <span
                 style={{ fontFamily: "'Fredoka One', cursive", fontSize: '2rem', color: '#7C3AED' }}
               >
                 +{xpEarned} XP
               </span>
-            </motion.div>
+            </m.div>
             <p
               style={{
                 fontSize: '0.85rem',
@@ -1039,7 +1036,7 @@ function SuccessState({
             </div>
           </>
         )}
-      </motion.div>
+      </m.div>
 
       {/* ── 3. ANSWER + FULL BREAKDOWN ── */}
       <div
@@ -1060,7 +1057,7 @@ function SuccessState({
         </p>
         <div className="flex gap-2 justify-center mb-4">
           {activePuzzle.answer.split('').map((l, i) => (
-            <motion.div
+            <m.div
               key={i}
               initial={{ scale: 0, rotate: -15 }}
               animate={{ scale: 1, rotate: 0 }}
@@ -1074,7 +1071,7 @@ function SuccessState({
               }}
             >
               {l}
-            </motion.div>
+            </m.div>
           ))}
         </div>
 
@@ -1138,7 +1135,7 @@ function SuccessState({
               .map((part, i) => {
                 const style = PART_STYLES[part.type!];
                 return (
-                  <motion.div
+                  <m.div
                     key={i}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -1169,10 +1166,10 @@ function SuccessState({
                     >
                       {part.text}
                     </span>
-                  </motion.div>
+                  </m.div>
                 );
               })}
-            <motion.div
+            <m.div
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5 + activePuzzle.clueParts.filter(p => p.type).length * 0.1 }}
@@ -1202,7 +1199,7 @@ function SuccessState({
               >
                 {activePuzzle.answer} ✓
               </span>
-            </motion.div>
+            </m.div>
           </div>
         </div>
       </div>
@@ -1232,7 +1229,7 @@ function SuccessState({
       >
         <RotateCcw size={16} /> Practice Again
       </button>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -1256,7 +1253,7 @@ function WrongFeedback({
   const msg = messages[Math.floor(Math.random() * messages.length)];
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 10, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10, scale: 0.96 }}
@@ -1297,7 +1294,7 @@ function WrongFeedback({
       >
         ✕
       </button>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -1311,7 +1308,7 @@ function AlreadySolvedBanner({
   onSolvePractice: () => void;
 }) {
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl p-4 mb-4 border-2 flex items-center gap-3"
@@ -1333,7 +1330,7 @@ function AlreadySolvedBanner({
           Come back tomorrow for a new clue, or practice again below.
         </p>
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -2058,7 +2055,7 @@ export function Puzzle() {
                   [...Array(activePuzzle.letterCount)].map((_, i) => {
                     const char = answer[i];
                     return (
-                      <motion.div
+                      <m.div
                         key={i}
                         animate={char ? { scale: [1, 1.15, 1] } : {}}
                         transition={{ duration: 0.15 }}
@@ -2083,7 +2080,7 @@ export function Puzzle() {
                         >
                           {char?.toUpperCase() || ''}
                         </span>
-                      </motion.div>
+                      </m.div>
                     );
                   })
                 )}
@@ -2145,7 +2142,7 @@ export function Puzzle() {
                   e.target.style.boxShadow = 'none';
                 }}
               />
-              <motion.button
+              <m.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSubmit}
@@ -2171,10 +2168,10 @@ export function Puzzle() {
               >
                 <Send size={18} />
                 <span className="hidden sm:inline">Submit</span>
-              </motion.button>
+              </m.button>
             </div>
 
-            <motion.button
+            <m.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
               onClick={handleHint}
@@ -2211,11 +2208,11 @@ export function Puzzle() {
                     ))}
                   </span>
                 )}
-            </motion.button>
+            </m.button>
 
             {/* Reveal Button — only after all hints are used */}
             {!loading && activePuzzle && hintsUnlocked >= activePuzzle.hints.length && (
-              <motion.button
+              <m.button
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileHover={{ scale: 1.02 }}
@@ -2232,14 +2229,14 @@ export function Puzzle() {
               >
                 <RotateCcw size={16} />
                 I'm stuck, reveal the answer
-              </motion.button>
+              </m.button>
             )}
           </div>
 
           {/* Hints */}
           <AnimatePresence>
             {visibleHints.length > 0 && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+              <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3
                     style={{
@@ -2257,13 +2254,13 @@ export function Puzzle() {
                       style={{ fontFamily: "'Nunito', sans-serif" }}
                     >
                       {showAllHints ? 'Collapse' : 'Show all'}
-                      <motion.span
+                      <m.span
                         animate={{ rotate: showAllHints ? 180 : 0 }}
                         transition={{ duration: 0.2 }}
                         className="flex"
                       >
                         <ChevronDown size={14} />
-                      </motion.span>
+                      </m.span>
                     </button>
                   )}
                 </div>
@@ -2277,7 +2274,7 @@ export function Puzzle() {
                     isDark={isDark}
                   />
                 ))}
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
         </div>

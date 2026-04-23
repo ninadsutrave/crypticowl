@@ -1,4 +1,4 @@
-import { motion } from 'motion/react';
+import { m } from 'motion/react';
 import { Mascot } from '../components/Mascot';
 import { getTheme } from '../theme';
 import { useDarkMode } from '../context/DarkModeContext';
@@ -14,13 +14,13 @@ export function NotFound() {
       className="min-h-[80vh] flex flex-col items-center justify-center px-4 text-center"
       style={{ fontFamily: "'Nunito', sans-serif" }}
     >
-      <motion.div
+      <m.div
         initial={{ opacity: 0, scale: 0.8, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 20 }}
       >
         <div className="mb-8 relative">
-          <motion.div
+          <m.div
             animate={{
               rotate: [0, -10, 10, -10, 0],
               y: [0, -5, 0],
@@ -37,7 +37,7 @@ export function NotFound() {
               speechBubble="Whooops! Where am I?"
               bubbleDirection="right"
             />
-          </motion.div>
+          </m.div>
           <div
             className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-32 h-4 blur-xl rounded-full opacity-20"
             style={{ background: isDark ? '#A78BFA' : '#5B21B6' }}
@@ -82,7 +82,7 @@ export function NotFound() {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <NavLink to="/" className="no-underline w-full sm:w-auto">
-            <motion.button
+            <m.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="flex items-center justify-center gap-2 px-8 py-3 rounded-full font-bold w-full"
@@ -94,11 +94,11 @@ export function NotFound() {
             >
               <Home size={18} />
               Back Home
-            </motion.button>
+            </m.button>
           </NavLink>
 
           <NavLink to="/puzzle" className="no-underline w-full sm:w-auto">
-            <motion.button
+            <m.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="flex items-center justify-center gap-2 px-8 py-3 rounded-full font-bold border-2 w-full"
@@ -110,10 +110,10 @@ export function NotFound() {
             >
               <Search size={18} />
               Solve Daily
-            </motion.button>
+            </m.button>
           </NavLink>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

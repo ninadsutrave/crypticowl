@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { Mascot } from '../components/Mascot';
 import { Search, ChevronRight, Eye } from 'lucide-react';
 import { useDarkMode } from '../context/DarkModeContext';
@@ -182,7 +182,7 @@ function PartsOfClue({ isDark }: { isDark: boolean }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {data.partsOfClue.map((part: CluePart) => (
-          <motion.button
+          <m.button
             key={part.key}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
@@ -223,7 +223,7 @@ function PartsOfClue({ isDark }: { isDark: boolean }) {
             >
               {part.desc}
             </p>
-          </motion.button>
+          </m.button>
         ))}
       </div>
     </div>
@@ -434,7 +434,7 @@ function WordplayPreview({
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {data.wordplayTypes.map((topic: WordplayType, i) => (
-          <motion.div
+          <m.div
             key={i}
             whileHover={{ scale: 1.04, y: -2 }}
             whileTap={{ scale: 0.97 }}
@@ -461,7 +461,7 @@ function WordplayPreview({
               {topic.label}
             </h3>
             <p style={{ fontSize: '0.78rem', color: T.textMuted, lineHeight: 1.5 }}>{topic.desc}</p>
-          </motion.div>
+          </m.div>
         ))}
       </div>
     </div>
@@ -526,7 +526,7 @@ function CompoundExampleCard({
 
       <AnimatePresence mode="wait">
         {!revealed ? (
-          <motion.div
+          <m.div
             key="hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -547,9 +547,9 @@ function CompoundExampleCard({
               <Eye size={18} />
               Reveal Explanation
             </button>
-          </motion.div>
+          </m.div>
         ) : (
-          <motion.div
+          <m.div
             key="revealed"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -592,7 +592,7 @@ function CompoundExampleCard({
                 💡 {ex.tip}
               </p>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
@@ -643,7 +643,7 @@ export function Learn() {
       >
         <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
           {SECTIONS.map((s, i) => (
-            <motion.button
+            <m.button
               key={s}
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
@@ -659,13 +659,13 @@ export function Learn() {
               }}
             >
               {s}
-            </motion.button>
+            </m.button>
           ))}
         </div>
       </div>
 
       <AnimatePresence mode="wait">
-        <motion.div
+        <m.div
           key={activeSection}
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1081,7 +1081,7 @@ export function Learn() {
               </div>
             </div>
           )}
-        </motion.div>
+        </m.div>
       </AnimatePresence>
     </div>
   );

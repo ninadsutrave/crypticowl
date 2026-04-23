@@ -1,18 +1,37 @@
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { StreakData } from '../app/hooks/useStreak';
 
-// ─── CLIENT ───────────────────────────────────────────────────────────────────
+// ─── CLIENT (lazy-loaded) ─────────────────────────────────────────────────────
+//
+// The `@supabase/supabase-js` bundle is ~193 KB uncompressed. Importing it
+// statically would parse-and-execute that code during initial hydration,
+// blocking LCP on mobile. Instead we dynamic-import the package the first
+// time any helper actually needs it — so it ships as its own chunk, loaded
+// in parallel with the app's real first paint (and often _after_ LCP).
 
 export const isSupabaseConfigured =
   !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Use placeholder strings when env vars are missing so createClient doesn't
-// throw synchronously and crash the app before React mounts.
-// All helper functions below guard on isSupabaseConfigured before making calls.
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co',
-  import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key'
-);
+let _clientPromise: Promise<SupabaseClient> | null = null;
+
+/**
+ * Returns a cached Supabase client. First call pays the module import cost
+ * (dynamic chunk); subsequent calls resolve immediately from the cache.
+ * Safe to call even when env vars are missing — we use placeholder strings
+ * so `createClient` won't throw, and the helper functions here guard on
+ * `isSupabaseConfigured` before making real network calls.
+ */
+export function getSupabaseClient(): Promise<SupabaseClient> {
+  if (!_clientPromise) {
+    _clientPromise = import('@supabase/supabase-js').then(({ createClient }) =>
+      createClient(
+        import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co',
+        import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key'
+      )
+    );
+  }
+  return _clientPromise;
+}
 
 // ─── ENUMS (mirror the PostgreSQL lookup tables / enums in 001_initial.sql) ───
 
@@ -225,6 +244,7 @@ export async function fetchPuzzleByDate(
   isoDate: string,
   _allowFallback = true
 ): Promise<DbDailyPuzzle | null> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return null;
   // Use limit(1) + order rather than .single() so that future multi-clue days
   // (crossword mode) don't cause a "multiple rows" error. We always want the first
@@ -298,6 +318,7 @@ export async function fetchPuzzleByDate(
  * Returns null if not found or not published.
  */
 export async function fetchPuzzleByNumber(puzzleNumber: number): Promise<DbDailyPuzzle | null> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return null;
   const { data, error } = await supabase
     .from('daily_puzzles')
@@ -352,6 +373,7 @@ export async function fetchPuzzleByNumber(puzzleNumber: number): Promise<DbDaily
 
 /** Fetch all published daily puzzles ordered by date descending (for the archive). */
 export async function fetchPuzzleArchive(): Promise<DbDailyPuzzle[]> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
     .from('daily_puzzles')
@@ -386,6 +408,7 @@ export async function fetchPuzzleArchive(): Promise<DbDailyPuzzle[]> {
 
 /** Fetch the normalised wordplay components for a clue (admin / detail view). */
 export async function fetchClueComponents(clueId: string): Promise<DbClueComponent[]> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
     .from('clue_components')
@@ -403,6 +426,7 @@ export async function fetchClueComponents(clueId: string): Promise<DbClueCompone
 
 /** Fetch a user's aggregate stats row. Returns null if they haven't played yet. */
 export async function fetchUserStats(userId: string): Promise<DbUserStats | null> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return null;
   const { data, error } = await supabase
     .from('user_stats')
@@ -425,6 +449,7 @@ export async function upsertUserStats(
   userId: string,
   stats: Omit<StreakData, 'history'>
 ): Promise<void> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return;
   const { error } = await supabase.from('user_stats').upsert({
     user_id: userId,
@@ -446,6 +471,8 @@ export async function syncLocalStatsToSupabase(
   userId: string,
   local: Omit<StreakData, 'history'>
 ): Promise<void> {
+  // Delegates to fetchUserStats / upsertUserStats — each acquires the client
+  // itself, so this wrapper doesn't need a local `supabase` reference.
   if (!isSupabaseConfigured || local.totalSolved === 0) return;
   const existing = await fetchUserStats(userId);
   // Only push local data if it's ahead (more XP) or no remote record exists yet
@@ -458,6 +485,7 @@ export async function syncLocalStatsToSupabase(
 
 /** Fetch a user's full solve history, newest first. */
 export async function fetchSolveHistory(userId: string): Promise<DbSolveRecord[]> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
     .from('solve_history')
@@ -491,6 +519,7 @@ export async function callRecordSolve(
     clientDate?: string;
   }
 ): Promise<boolean> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return false;
   const { data, error } = await supabase.rpc('record_solve', {
     p_user_id: userId,
@@ -517,6 +546,7 @@ export async function upsertClueReaction(
   clueId: string,
   reaction: 'like' | 'dislike'
 ): Promise<void> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return;
   const { error } = await supabase.from('clue_reactions').upsert({
     user_id: userId,
@@ -529,6 +559,7 @@ export async function upsertClueReaction(
 
 /** Remove a user's reaction (when they toggle off). */
 export async function deleteClueReaction(userId: string, clueId: string): Promise<void> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return;
   const { error } = await supabase
     .from('clue_reactions')
@@ -542,6 +573,7 @@ export async function deleteClueReaction(userId: string, clueId: string): Promis
 
 /** Fetch the total number of likes for the entire app. */
 export async function fetchAppLikesCount(): Promise<number> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return 0;
   const { data, error } = await supabase.from('app_likes_count').select('total_likes').single();
   if (error) {
@@ -553,6 +585,7 @@ export async function fetchAppLikesCount(): Promise<number> {
 
 /** Record a new like for the app. */
 export async function addAppLike(): Promise<boolean> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return false;
   const { error } = await supabase.from('app_likes').insert({});
   if (error) {
@@ -571,6 +604,7 @@ export async function submitClue(
   userId: string,
   clue: Omit<DbClueSubmission, 'id' | 'user_id' | 'status' | 'admin_notes' | 'created_at'>
 ): Promise<boolean> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return false;
   const { error } = await supabase.from('clue_submissions').insert({
     user_id: userId,
@@ -585,6 +619,7 @@ export async function submitClue(
 
 /** Fetch all submissions for a specific user. */
 export async function fetchUserSubmissions(userId: string): Promise<DbClueSubmission[]> {
+  const supabase = await getSupabaseClient();
   if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
     .from('clue_submissions')

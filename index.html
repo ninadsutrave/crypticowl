@@ -25,33 +25,58 @@
     <title>The Cryptic Owl — Daily British Cryptic Crossword</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <!-- Font preconnect + non-blocking stylesheet -->
+    <!-- Preconnect Supabase: the Puzzle page fetches today's clue from here
+         on mount. Saves the ~80 ms TCP+TLS handshake that Lighthouse flagged. -->
+    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
+
+    <!-- Font preconnect + non-blocking stylesheet (preload-swap pattern).
+         With `media=print`, the browser treats the link as non-render-blocking,
+         then onload flips it to `all` so the styles apply. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      rel="preload"
-      as="style"
-      href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap"
-    />
-    <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap"
+      media="print"
+      onload="this.media='all'"
     />
-
-    <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=%VITE_GA_ID%"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag('js', new Date());
-      gtag('config', '%VITE_GA_ID%');
-    </script>
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap"
+      />
+    </noscript>
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Google Analytics — loaded after first idle so it doesn't contend with
+         the main-thread work during hydration. Drops TBT significantly on
+         mobile where GA's init pushes long tasks. -->
+    <script>
+      (function loadGA() {
+        var id = '%VITE_GA_ID%';
+        if (!id || id.indexOf('VITE_GA_ID') !== -1) return;
+        function init() {
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://www.googletagmanager.com/gtag/js?id=' + id;
+          document.head.appendChild(s);
+          window.dataLayer = window.dataLayer || [];
+          window.gtag = function () {
+            window.dataLayer.push(arguments);
+          };
+          window.gtag('js', new Date());
+          window.gtag('config', id);
+        }
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(init, { timeout: 3000 });
+        } else {
+          setTimeout(init, 2000);
+        }
+      })();
+    </script>
   </body>
 </html>

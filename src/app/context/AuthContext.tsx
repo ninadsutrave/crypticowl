@@ -1,6 +1,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured, syncLocalStatsToSupabase } from '../../lib/supabase';
+import {
+  getSupabaseClient,
+  isSupabaseConfigured,
+  syncLocalStatsToSupabase,
+} from '../../lib/supabase';
 import { getStoredStreakData } from '../hooks/useStreak';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -53,26 +57,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Restore existing session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    let subscription: { unsubscribe: () => void } | null = null;
 
-    // Keep session in sync with Supabase auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
+    // Defer session restoration until after LCP so we're not contending with
+    // hydration for main-thread time. `getSupabaseClient()` also dynamic-imports
+    // the Supabase SDK chunk on first call, keeping it out of the initial bundle.
+    const run = async () => {
+      const supabase = await getSupabaseClient();
 
-      // On first sign-in, push any local progress to Supabase
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-        const localData = getStoredStreakData();
-        await syncLocalStatsToSupabase(session.user.id, localData);
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        setLoading(false);
+      });
+
+      subscription = supabase.auth.onAuthStateChange(async (event, session) => {
+        setSession(session);
+
+        // On first sign-in, push any local progress to Supabase
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+          const localData = getStoredStreakData();
+          await syncLocalStatsToSupabase(session.user.id, localData);
+        }
+      }).data.subscription;
+    };
+
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    let idleHandle: number | null = null;
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    if (typeof w.requestIdleCallback === 'function') {
+      idleHandle = w.requestIdleCallback(run, { timeout: 1500 });
+    } else {
+      timeoutHandle = setTimeout(run, 800);
+    }
+
+    return () => {
+      if (idleHandle != null && typeof w.cancelIdleCallback === 'function') {
+        w.cancelIdleCallback(idleHandle);
       }
-    });
-
-    return () => subscription.unsubscribe();
+      if (timeoutHandle != null) clearTimeout(timeoutHandle);
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const signIn = async () => {
@@ -87,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // When the popup completes auth it redirects to window.location.origin,
     // which writes the session to localStorage. Supabase's onAuthStateChange
     // picks up the storage event and fires SIGNED_IN in the parent window.
+    const supabase = await getSupabaseClient();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -127,7 +155,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // visible feedback. We already cleared the local tokens above, so the
     // server call is purely best-effort cleanup.
     if (isSupabaseConfigured) {
-      supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      // Fire-and-forget; we've already cleared local tokens above.
+      getSupabaseClient()
+        .then(supabase => supabase.auth.signOut({ scope: 'local' }))
+        .catch(() => {});
     }
 
     // ── Step 3: hard-navigate to home ────────────────────────────────────────

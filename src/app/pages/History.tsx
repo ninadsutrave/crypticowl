@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import {
   Trophy,
   Zap,
@@ -82,7 +82,7 @@ function SignInGate({ isDark }: { isDark: boolean }) {
       {/* Floating bg */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" aria-hidden>
         {['P', 'R', 'O', 'G', 'R', 'E', 'S', 'S', '★'].map((char, i) => (
-          <motion.div
+          <m.div
             key={i}
             className="absolute select-none"
             style={{
@@ -102,11 +102,11 @@ function SignInGate({ isDark }: { isDark: boolean }) {
             }}
           >
             {char}
-          </motion.div>
+          </m.div>
         ))}
       </div>
 
-      <motion.div
+      <m.div
         className="relative z-10 w-full max-w-md"
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
@@ -162,7 +162,7 @@ function SignInGate({ isDark }: { isDark: boolean }) {
 
           <div className="text-left mb-6 flex flex-col gap-2">
             {features.map((f, i) => (
-              <motion.div
+              <m.div
                 key={i}
                 className="flex items-center gap-3 px-3 py-2 rounded-xl"
                 style={{ background: isDark ? '#1A1035' : '#F9F7FF' }}
@@ -174,7 +174,7 @@ function SignInGate({ isDark }: { isDark: boolean }) {
                 <span style={{ color: T.textSub, fontSize: '0.88rem', fontWeight: 600 }}>
                   {f.label}
                 </span>
-              </motion.div>
+              </m.div>
             ))}
           </div>
 
@@ -192,7 +192,7 @@ function SignInGate({ isDark }: { isDark: boolean }) {
               <code>.env.example</code>.
             </div>
           ) : (
-            <motion.button
+            <m.button
               onClick={signIn}
               className="w-full flex items-center justify-center gap-3 py-3 rounded-full font-bold"
               style={{
@@ -209,14 +209,14 @@ function SignInGate({ isDark }: { isDark: boolean }) {
             >
               <GoogleIcon />
               Sign in with Google
-            </motion.button>
+            </m.button>
           )}
 
           <p style={{ color: T.textFaint, fontSize: '0.78rem', marginTop: '1rem' }}>
             Sign in to save your streak and stats across devices.
           </p>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }
@@ -236,7 +236,7 @@ function StatCard({
 }) {
   const T = getTheme(isDark);
   return (
-    <motion.div
+    <m.div
       className="rounded-2xl border p-4 text-center"
       style={{ background: T.cardBg, borderColor: T.cardBorder }}
       whileHover={{ y: -2, scale: 1.02 }}
@@ -257,7 +257,7 @@ function StatCard({
       >
         {label}
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -290,7 +290,7 @@ function SolveRow({
         : `${Math.floor(record.solve_time_seconds / 60)}m ${record.solve_time_seconds % 60}s`;
 
   return (
-    <motion.div
+    <m.div
       className="rounded-2xl border px-4 py-3"
       style={{ background: T.cardBg, borderColor: T.cardBorder }}
       initial={{ opacity: 0, x: -16 }}
@@ -377,7 +377,7 @@ function SolveRow({
           </span>
         )}
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -402,7 +402,7 @@ function ArchiveRow({
   });
 
   return (
-    <motion.button
+    <m.button
       className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border text-left"
       style={{ background: T.cardBg, borderColor: T.cardBorder }}
       onClick={() => navigate(`/puzzle/${puzzle.number}`)}
@@ -438,7 +438,7 @@ function ArchiveRow({
         </div>
       </div>
       <ChevronRight size={18} style={{ color: T.textFaint }} />
-    </motion.button>
+    </m.button>
   );
 }
 
@@ -574,7 +574,7 @@ function SolveInsights({
   };
 
   return (
-    <motion.div
+    <m.div
       className="mb-6"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -811,7 +811,7 @@ function SolveInsights({
           <span style={{ fontSize: '0.65rem', color: T.textFaint }}>Solved</span>
         </div>
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -820,7 +820,7 @@ function SolveInsights({
 export function Progress() {
   const { isDark } = useDarkMode();
   const T = getTheme(isDark);
-  const { user, signOut, isSignedIn } = useAuth();
+  const { user, signOut, isSignedIn, loading: authLoading } = useAuth();
   const localStreak = useStreak();
   const levelTitle = getLevelTitle(localStreak.level);
   const navigate = useNavigate();
@@ -868,6 +868,23 @@ export function Progress() {
     loadData();
   }, [loadData]);
 
+  // Don't flash the sign-in gate while the idle-deferred auth restore is still
+  // running — a previously-signed-in user would briefly see "Sign in" before
+  // their session resolves. Wait for loading to settle before deciding.
+  if (authLoading) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: T.pageBg }}
+      >
+        <div
+          aria-label="Loading"
+          className="h-6 w-6 rounded-full border-[3px] border-t-transparent animate-spin"
+          style={{ borderColor: '#7C3AED', borderTopColor: 'transparent' }}
+        />
+      </div>
+    );
+  }
   if (!isSignedIn) return <SignInGate isDark={isDark} />;
 
   // Use remote stats if available, otherwise fall back to localStorage
@@ -903,7 +920,7 @@ export function Progress() {
     >
       <div className="max-w-2xl mx-auto px-4 py-10">
         {/* ── Profile card ─────────────────────────────────────────── */}
-        <motion.div
+        <m.div
           className="rounded-3xl border p-6 mb-6"
           style={{
             background: T.cardBg,
@@ -968,7 +985,7 @@ export function Progress() {
                 </span>
               </div>
             </div>
-            <motion.button
+            <m.button
               onClick={signOut}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border"
               style={{
@@ -981,14 +998,14 @@ export function Progress() {
             >
               <LogOut size={14} />
               Sign out
-            </motion.button>
+            </m.button>
           </div>
-        </motion.div>
+        </m.div>
 
         {/* ── Error banner ─────────────────────────────────────────── */}
         <AnimatePresence>
           {error && (
-            <motion.div
+            <m.div
               className="rounded-2xl border px-4 py-3 mb-4 flex items-center gap-3"
               style={{
                 background: isDark ? '#2A0F15' : '#FFF1F2',
@@ -1009,20 +1026,20 @@ export function Progress() {
               >
                 Couldn't load remote data. Showing local stats.
               </span>
-              <motion.button
+              <m.button
                 onClick={() => loadData()}
                 className="flex items-center gap-1 text-xs font-bold"
                 style={{ color: isDark ? '#FCA5A5' : '#EF4444' }}
                 whileTap={{ scale: 0.9 }}
               >
                 <RefreshCw size={12} /> Retry
-              </motion.button>
-            </motion.div>
+              </m.button>
+            </m.div>
           )}
         </AnimatePresence>
 
         {/* ── Stats grid ───────────────────────────────────────────── */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.4 }}
@@ -1058,7 +1075,7 @@ export function Progress() {
               />
             </div>
           )}
-        </motion.div>
+        </m.div>
 
         {/* ── Solve insights charts ────────────────────────────────── */}
         {!loading && solveHistory.length > 0 && (
@@ -1066,7 +1083,7 @@ export function Progress() {
         )}
 
         {/* ── Submit a Clue ────────────────────────────────────────── */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18, duration: 0.4 }}
@@ -1117,10 +1134,10 @@ export function Progress() {
               <Mascot mood="celebrating" size={100} />
             </div>
           </div>
-        </motion.div>
+        </m.div>
 
         {/* ── Solve history ────────────────────────────────────────── */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.4 }}
@@ -1168,10 +1185,10 @@ export function Progress() {
               ))}
             </div>
           )}
-        </motion.div>
+        </m.div>
 
         {/* ── Puzzle archive ───────────────────────────────────────── */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.4 }}
@@ -1226,7 +1243,7 @@ export function Progress() {
             </div>
           )}
 
-          <motion.div
+          <m.div
             className="rounded-2xl border border-dashed p-5 text-center mt-3"
             style={{
               borderColor: isDark ? '#3D2A6B' : '#C4B5FD',
@@ -1243,8 +1260,8 @@ export function Progress() {
             <p style={{ color: T.textFaint, fontSize: '0.83rem', margin: 0 }}>
               More puzzles added daily — check back tomorrow!
             </p>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       </div>
     </div>
   );

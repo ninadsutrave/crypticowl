@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { Send, ArrowLeft, Info, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useDarkMode } from '../context/DarkModeContext';
@@ -27,7 +27,7 @@ const WORDPLAY_TYPES: { id: ClueWordplayType; label: string }[] = [
 export function SubmitClue() {
   const { isDark } = useDarkMode();
   const T = getTheme(isDark);
-  const { user, isSignedIn } = useAuth();
+  const { user, isSignedIn, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -49,6 +49,22 @@ export function SubmitClue() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Wait for auth to finish restoring before deciding — otherwise a previously
+  // signed-in user gets redirected away during the idle-deferred session hydration.
+  if (authLoading) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: T.pageBg }}
+      >
+        <div
+          aria-label="Loading"
+          className="h-6 w-6 rounded-full border-[3px] border-t-transparent animate-spin"
+          style={{ borderColor: '#7C3AED', borderTopColor: 'transparent' }}
+        />
+      </div>
+    );
+  }
   if (!isSignedIn) {
     navigate('/history');
     return null;
@@ -102,7 +118,7 @@ export function SubmitClue() {
           Back to History
         </button>
 
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="rounded-3xl border p-6 md:p-8"
@@ -134,7 +150,7 @@ export function SubmitClue() {
 
           <AnimatePresence mode="wait">
             {success ? (
-              <motion.div
+              <m.div
                 key="success"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -159,9 +175,9 @@ export function SubmitClue() {
                 <div className="flex justify-center">
                   <CheckCircle2 size={48} style={{ color: '#10B981' }} />
                 </div>
-              </motion.div>
+              </m.div>
             ) : (
-              <motion.form key="form" onSubmit={handleSubmit} className="space-y-6">
+              <m.form key="form" onSubmit={handleSubmit} className="space-y-6">
                 {error && (
                   <div
                     className="p-4 rounded-2xl flex items-center gap-3 border"
@@ -431,7 +447,7 @@ export function SubmitClue() {
                   </p>
                 </div>
 
-                <motion.button
+                <m.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   disabled={submitting}
@@ -448,11 +464,11 @@ export function SubmitClue() {
                     <Send size={20} />
                   )}
                   {submitting ? 'Submitting...' : 'Submit for Review'}
-                </motion.button>
-              </motion.form>
+                </m.button>
+              </m.form>
             )}
           </AnimatePresence>
-        </motion.div>
+        </m.div>
       </div>
     </div>
   );

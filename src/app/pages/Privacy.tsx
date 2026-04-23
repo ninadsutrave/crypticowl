@@ -1,4 +1,4 @@
-import { motion } from 'motion/react';
+import { m } from 'motion/react';
 import { useDarkMode } from '../context/DarkModeContext';
 import { getTheme } from '../theme';
 
@@ -59,7 +59,7 @@ export function Privacy() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -88,7 +88,7 @@ export function Privacy() {
 
         <div className="flex flex-col gap-10">
           {sections.map((section, i) => (
-            <motion.section
+            <m.section
               key={section.title}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -113,10 +113,10 @@ export function Privacy() {
               >
                 {section.content}
               </p>
-            </motion.section>
+            </m.section>
           ))}
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }
