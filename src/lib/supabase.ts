@@ -33,6 +33,17 @@ export function getSupabaseClient(): Promise<SupabaseClient> {
   return _clientPromise;
 }
 
+/**
+ * Drop the cached Supabase client so the next getSupabaseClient() call
+ * creates a fresh instance. Invoked from signOut() so that any in-memory
+ * auth state in the current client is released alongside the localStorage
+ * wipe. (We also hard-reload in signOut, so this is belt-and-braces; keeps
+ * the invariant clean for any future non-reload sign-out path.)
+ */
+export function resetSupabaseClient(): void {
+  _clientPromise = null;
+}
+
 // ─── ENUMS (mirror the PostgreSQL lookup tables / enums in 001_initial.sql) ───
 
 export type ClueWordplayType =

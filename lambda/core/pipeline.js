@@ -40,6 +40,10 @@ export async function generateValidClue(callAI, aiProvider, dbProvider) {
 
   // Flat attempt counter: every AI generation call (lexical OR clue) costs 1.
   let attempts = 0;
+  // If Flash (the judge) is unavailable for N attempts in a row, bail out
+  // rather than silently draining the full budget without a decisive signal.
+  let consecutiveJudgeUnavailable = 0;
+  const MAX_CONSECUTIVE_JUDGE_FAILURES = 3;
 
   while (attempts < MAX_ATTEMPTS) {
     // ── Select a word + mechanism (costs 1 attempt) ───────────────────────────
@@ -83,14 +87,26 @@ export async function generateValidClue(callAI, aiProvider, dbProvider) {
         );
 
         if (verdict.judgeUnavailable) {
-          // Flash transiently failed even after its own internal retries. Don't
-          // burn the whole run on a single blip — continue to the next attempt.
-          // The client already handles 429/5xx/timeout retries; reaching here
-          // means sustained failure, not a single hiccup.
-          console.warn('  Flash judge unavailable for this attempt — continuing to next.');
+          // Flash transiently failed even after its own internal retries.
+          // Don't burn the whole run on a single blip — continue to the next
+          // attempt. But if it's unavailable N times in a row, Flash is
+          // actually down and we should bail loudly rather than silently
+          // consume all 9 attempts.
+          consecutiveJudgeUnavailable++;
+          if (consecutiveJudgeUnavailable >= MAX_CONSECUTIVE_JUDGE_FAILURES) {
+            throw new Error(
+              `Flash judge unavailable for ${MAX_CONSECUTIVE_JUDGE_FAILURES} consecutive attempts — aborting. Last feedback: ${verdict.feedback}`
+            );
+          }
+          console.warn(
+            `  Flash judge unavailable (${consecutiveJudgeUnavailable}/${MAX_CONSECUTIVE_JUDGE_FAILURES}) — continuing to next attempt.`
+          );
           feedback = null;
           continue;
         }
+        // Reset the judge-failure counter on any successful judge response,
+        // whether the clue was accepted or rejected.
+        consecutiveJudgeUnavailable = 0;
 
         if (verdict.valid) {
           console.log(`  Accepted (score ${verdict.score}/10): "${clue.clue}"`);

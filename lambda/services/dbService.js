@@ -94,12 +94,38 @@ export async function writeToDB(lexical, clue, verdict = {}, aiProvider, dbProvi
   const authorId = AUTHOR_MAP[aiProvider.toLowerCase()] || AUTHOR_MAP.gemini;
   const hints = constructHints(lexical, clue);
 
-  // 1. Determine target date (next day — lambda runs at 23:50 UTC).
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() + 1);
-  const targetDate = date.toISOString().split('T')[0];
+  // 1. Determine target date — max(today, latest+1).
+  //
+  // Why this rule:
+  //   - "today" ensures we never schedule into the past if the cron missed
+  //     yesterday (quota, outage, manual re-trigger after downtime): we still
+  //     fill the current day forward instead of leaving a gap.
+  //   - "latest+1" ensures we never collide with an already-populated date:
+  //     if a puzzle for today already exists (e.g. second manual invocation),
+  //     we schedule tomorrow instead of failing the idempotency check.
+  // Together: always produces a unique, non-past date adjacent to the archive.
+  const todayStr = new Date().toISOString().split('T')[0];
 
-  // 2. Idempotency check: skip if a puzzle already exists for this date.
+  const { data: latestRow } = await db
+    .from('daily_puzzles')
+    .select('date')
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let targetDate = todayStr;
+  if (latestRow?.date) {
+    const next = new Date(`${latestRow.date}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    const nextStr = next.toISOString().split('T')[0];
+    if (nextStr > targetDate) targetDate = nextStr;
+  }
+  console.log(
+    `[dbService] Target date: ${targetDate} (today=${todayStr}, latest_in_db=${latestRow?.date ?? 'none'})`
+  );
+
+  // 2. Idempotency guard — defensive check, should never fire given step 1.
+  // Protects against two lambdas racing (e.g. manual + cron same minute).
   const { data: existingPuzzle } = await db
     .from('daily_puzzles')
     .select('id')
@@ -146,7 +172,10 @@ export async function writeToDB(lexical, clue, verdict = {}, aiProvider, dbProvi
 
   if (clueError) throw clueError;
 
-  // 5. Insert daily_puzzle row.
+  // 5. Insert daily_puzzle row. If this fails, best-effort delete the clue we
+  // just wrote so we don't leave a dangling row in `clues` with no
+  // daily_puzzles pointer. (Not transactional — a PL/pgSQL RPC would be — but
+  // closes the window where an orphan can survive past a single failed run.)
   const { error: dpError } = await db.from('daily_puzzles').insert({
     date: targetDate,
     clue_id: clueData.id,
@@ -156,6 +185,18 @@ export async function writeToDB(lexical, clue, verdict = {}, aiProvider, dbProvi
   });
 
   if (dpError && dpError.code !== '23505') {
+    console.error(
+      `daily_puzzles insert failed (${dpError.code}: ${dpError.message}). Rolling back clue ${clueData.id}.`
+    );
+    await db
+      .from('clues')
+      .delete()
+      .eq('id', clueData.id)
+      .then(({ error: rbError }) => {
+        if (rbError) {
+          console.error('Rollback of clue row failed — manual cleanup required:', rbError.message);
+        }
+      });
     throw dpError;
   }
 

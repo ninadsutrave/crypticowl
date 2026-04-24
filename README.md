@@ -6,6 +6,22 @@ The Cryptic Owl is a daily crossword learning app designed to demystify the comp
 
 ---
 
+## 📸 Preview
+
+### Today's Puzzle
+
+<p align="center">
+  <img src="./docs/screenshots/puzzle-desktop.png" alt="Daily Puzzle — desktop view with Ollie the mascot, clue card, and answer input" width="860" />
+</p>
+
+### Learn Hub
+
+<p align="center">
+  <img src="./docs/screenshots/learn-desktop.png" alt="Learn Hub — interactive guide with Intro, Parts, Wordplay, Compound, and Synonyms tabs" width="860" />
+</p>
+
+---
+
 ## ✨ Features
 
 - **🧩 Daily Cryptic Clue**: A hand-crafted, high-quality cryptic clue every single day.

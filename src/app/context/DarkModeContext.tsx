@@ -12,7 +12,11 @@ export function DarkModeProvider({ children }: { children: ReactNode }) {
     try {
       const stored = localStorage.getItem('tco-dark');
       if (stored !== null) return stored === 'true';
-      return false; // default to light mode
+      // First-time visitor — honour the OS colour-scheme preference.
+      if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      return false;
     } catch {
       return false;
     }

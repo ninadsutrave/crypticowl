@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
-import { callRecordSolve } from '../../lib/supabase';
+import { useState, useCallback, useEffect } from 'react';
+import { callRecordSolve, fetchUserStats } from '../../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export interface SolveRecord {
   date: string;
@@ -108,11 +109,54 @@ export function hasSolvedToday(): boolean {
 
 export function useStreak() {
   const [data, setData] = useState<StreakData>(getStoredStreakData);
+  const { user, isSignedIn, loading: authLoading } = useAuth();
+
+  // ── Hydrate local cache from Supabase when the user is signed in ───────────
+  // Without this, a fresh-device sign-in would show streak=0 / xp=0 in the
+  // navbar until the user's next local solve, even when Supabase holds their
+  // real progress. We pull the authoritative remote row once per session and
+  // lift every field that's higher than the local cached value.
+  useEffect(() => {
+    if (authLoading || !isSignedIn || !user) return;
+    let cancelled = false;
+    fetchUserStats(user.id)
+      .then(remote => {
+        if (cancelled || !remote) return;
+        const local = getStoredStreakData();
+        const merged: StreakData = {
+          count: Math.max(local.count, remote.streak_count),
+          lastSolved: local.lastSolved, // local-time day key; remote uses UTC date
+          totalSolved: Math.max(local.totalSolved, remote.total_solved),
+          xp: Math.max(local.xp, remote.xp),
+          level: Math.max(local.level, remote.level),
+          bestStreak: Math.max(local.bestStreak, remote.best_streak),
+          history: local.history,
+        };
+        // Only persist if the merge actually changed something, to avoid
+        // firing an unnecessary render on every mount.
+        if (
+          merged.count !== local.count ||
+          merged.totalSolved !== local.totalSolved ||
+          merged.xp !== local.xp ||
+          merged.level !== local.level ||
+          merged.bestStreak !== local.bestStreak
+        ) {
+          saveData(merged);
+          setData(merged);
+        }
+      })
+      .catch(() => {
+        /* best-effort hydration; local cache is authoritative on failure */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isSignedIn, user]);
 
   /**
    * Record a puzzle solve.
-   * - Always writes to localStorage immediately (works offline / without auth).
-   * - If userId is provided, fire-and-forget syncs to Supabase via record_solve() RPC.
+   * - ALWAYS writes to localStorage immediately (signed-out + offline friendly).
+   * - If userId + puzzleId are present, fire-and-forget syncs to Supabase.
    */
   const recordSolve = useCallback(
     (
@@ -123,9 +167,6 @@ export function useStreak() {
       wrongAttempts: number = 0,
       solveTimeSeconds?: number
     ) => {
-      // Only track stats if user is logged in
-      if (!userId) return null;
-
       const today = new Date().toDateString();
       const current = getStoredStreakData();
 

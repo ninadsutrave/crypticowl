@@ -4,6 +4,7 @@ import {
   getSupabaseClient,
   isSupabaseConfigured,
   syncLocalStatsToSupabase,
+  resetSupabaseClient,
 } from '../../lib/supabase';
 import { getStoredStreakData } from '../hooks/useStreak';
 
@@ -160,6 +161,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .then(supabase => supabase.auth.signOut({ scope: 'local' }))
         .catch(() => {});
     }
+    // Drop the cached client so the next getSupabaseClient() builds fresh —
+    // defensive even though we hard-reload below.
+    resetSupabaseClient();
 
     // ── Step 3: hard-navigate to home ────────────────────────────────────────
     // React Router navigate() won't help here because we want to guarantee a

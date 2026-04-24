@@ -564,6 +564,7 @@ function SuccessState({
   wasRevealed: boolean;
 }) {
   const [copied, setCopied] = useState(false);
+  const [shareError, setShareError] = useState(false);
   const runConfetti = useRef(false);
   const T = getTheme(isDark);
   const { count: streak, totalSolved, xp, level, recordSolve } = useStreak();
@@ -680,7 +681,10 @@ function SuccessState({
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      setCopied(false);
+      // Clipboard blocked (insecure context, older browser, permissions) —
+      // surface a brief error so the user knows nothing was copied.
+      setShareError(true);
+      setTimeout(() => setShareError(false), 2500);
     }
   };
 
@@ -914,19 +918,26 @@ function SuccessState({
             whileTap={{ scale: 0.97 }}
             className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all"
             style={{
-              background: copied
-                ? 'linear-gradient(135deg, #059669, #047857)'
-                : 'linear-gradient(135deg, #7C3AED, #5B21B6)',
+              background: shareError
+                ? 'linear-gradient(135deg, #DC2626, #B91C1C)'
+                : copied
+                  ? 'linear-gradient(135deg, #059669, #047857)'
+                  : 'linear-gradient(135deg, #7C3AED, #5B21B6)',
               color: 'white',
               fontFamily: "'Nunito', sans-serif",
               fontWeight: 800,
               fontSize: '0.95rem',
-              boxShadow: copied
-                ? '0 4px 14px rgba(5,150,105,0.35)'
-                : '0 4px 14px rgba(124,58,237,0.35)',
+              boxShadow: shareError
+                ? '0 4px 14px rgba(220,38,38,0.35)'
+                : copied
+                  ? '0 4px 14px rgba(5,150,105,0.35)'
+                  : '0 4px 14px rgba(124,58,237,0.35)',
             }}
+            aria-live="polite"
           >
-            {copied ? (
+            {shareError ? (
+              <>Couldn't copy — select and copy manually</>
+            ) : copied ? (
               <>
                 <Check size={17} /> Copied to clipboard!
               </>
@@ -1667,8 +1678,13 @@ export function Puzzle() {
     setLoading(true);
     setNotFound(false);
 
+    // Guard against stale writes if the user navigates before the fetch resolves
+    // (e.g. rapid archive hops).
+    let cancelled = false;
+
     if (isArchive && requestedNumber) {
       fetchPuzzleByNumber(requestedNumber).then(p => {
+        if (cancelled) return;
         if (p) {
           setActivePuzzle(mapDbPuzzle(p));
           setPuzzleId(p.id);
@@ -1679,10 +1695,13 @@ export function Puzzle() {
         setLoading(false);
       });
     } else {
-      // Fetch today's puzzle with caching
+      // Fetch today's puzzle with stale-while-revalidate caching. Using
+      // `updated_at` as the cache key lets us paint instantly from cache and
+      // silently refresh if admin edited the clue mid-day.
       const isoDate = new Date().toISOString().split('T')[0];
       const cacheKey = `tco-puzzle-${isoDate}`;
       const cached = localStorage.getItem(cacheKey);
+      let paintedFromCache = false;
 
       if (cached) {
         try {
@@ -1691,28 +1710,37 @@ export function Puzzle() {
           setPuzzleId(p.id);
           setStartTime(Date.now());
           setLoading(false);
-          return;
+          paintedFromCache = true;
         } catch {
           localStorage.removeItem(cacheKey);
         }
       }
 
       fetchPuzzleByDate(isoDate).then(p => {
+        if (cancelled) return;
         if (p) {
-          setActivePuzzle(mapDbPuzzle(p));
-          setPuzzleId(p.id);
-          setStartTime(Date.now());
-          // Cache for the rest of the day
-          localStorage.setItem(cacheKey, JSON.stringify(p));
-        } else {
-          // No puzzle in the DB yet — fall back to the built-in sample so
-          // users always have something to play.
+          const freshJson = JSON.stringify(p);
+          // Swap to fresh data only if it actually changed — avoids a
+          // pointless re-render when cache is already current.
+          if (!paintedFromCache || cached !== freshJson) {
+            setActivePuzzle(mapDbPuzzle(p));
+            setPuzzleId(p.id);
+            if (!paintedFromCache) setStartTime(Date.now());
+            localStorage.setItem(cacheKey, freshJson);
+          }
+        } else if (!paintedFromCache) {
+          // Neither today nor yesterday in DB, and no cache — show the
+          // built-in fallback clue so users always land on something playable.
           setActivePuzzle(DEFAULT_PUZZLE);
           setStartTime(Date.now());
         }
         setLoading(false);
       });
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [requestedNumber, isArchive]);
 
   const [answer, setAnswer] = useState('');
@@ -1742,6 +1770,20 @@ export function Puzzle() {
   useEffect(() => {
     // Handled in the main loading effect above
   }, [isArchive]);
+
+  // SPA-level "soft 404": we can't return an HTTP 404 status, but we can tell
+  // crawlers this page has no indexable content so Google/Bing don't accrue
+  // "Puzzle not found" entries in their index. Reverts on unmount.
+  useEffect(() => {
+    if (!notFound) return;
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex,nofollow';
+    document.head.appendChild(meta);
+    return () => {
+      document.head.removeChild(meta);
+    };
+  }, [notFound]);
 
   // Loading state for archive puzzles
   if (notFound) {
@@ -1846,6 +1888,10 @@ export function Puzzle() {
     setWrongAttemptsCount(0);
     setNewHintIndex(null);
     setShowAllHints(false);
+    // Reset the solve clock so "Practice Again" doesn't inherit the previous
+    // run's startTime (which would inflate the replay's recorded solve time).
+    setSolveTime(0);
+    setStartTime(Date.now());
   };
 
   const visibleHints = activePuzzle?.hints.slice(0, hintsUnlocked) || [];

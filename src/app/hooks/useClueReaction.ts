@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { upsertClueReaction, deleteClueReaction } from '../../lib/supabase';
 
 export type Reaction = 'like' | 'dislike' | null;
@@ -43,6 +43,25 @@ export function useClueReaction(puzzleNumber: number, userId?: string, puzzleId?
   const [reaction, setReaction] = useState<Reaction>(
     () => getStoredReactions()[puzzleNumber] ?? null
   );
+
+  // Re-read when the puzzleNumber changes (user navigates from today's puzzle
+  // to an archive puzzle). Without this, the state remains locked to the very
+  // first puzzleNumber the hook was instantiated with.
+  useEffect(() => {
+    setReaction(getStoredReactions()[puzzleNumber] ?? null);
+  }, [puzzleNumber]);
+
+  // Cross-tab sync: if the user votes in another tab, mirror the change here.
+  // The `storage` event fires for changes in *other* tabs only — this tab's
+  // own writes won't re-trigger a render.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== STORAGE_KEY) return;
+      setReaction(getStoredReactions()[puzzleNumber] ?? null);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [puzzleNumber]);
 
   const vote = (r: 'like' | 'dislike') => {
     const next: Reaction = reaction === r ? null : r;
