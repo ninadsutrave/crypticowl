@@ -1,7 +1,39 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import path from 'path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+
+/**
+ * Inline the main CSS bundle into `<style>` inside the HTML so the browser
+ * doesn't have to make a second round-trip before it can paint. Lighthouse
+ * was flagging the 15 KB `index-*.css` as a 300 ms render-blocking request
+ * on mobile; inlining it drops that cost to zero.
+ */
+function inlineCss(): Plugin {
+  return {
+    name: 'inline-css',
+    apply: 'build',
+    enforce: 'post',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        const bundle = ctx.bundle;
+        if (!bundle) return html;
+        for (const [fileName, asset] of Object.entries(bundle)) {
+          if (asset.type !== 'asset' || !fileName.endsWith('.css')) continue;
+          const css = typeof asset.source === 'string' ? asset.source : asset.source.toString();
+          // Strip the <link rel="stylesheet"> for this file + inline the CSS.
+          const linkRe = new RegExp(
+            `<link\\s+rel="stylesheet"[^>]*href="[^"]*${fileName.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}"[^>]*>`,
+            'g'
+          );
+          html = html.replace(linkRe, `<style>${css}</style>`);
+        }
+        return html;
+      },
+    },
+  };
+}
 
 export default defineConfig({
   plugins: [
@@ -9,6 +41,7 @@ export default defineConfig({
     // Tailwind is not being actively used – do not remove them
     react(),
     tailwindcss(),
+    inlineCss(),
   ],
   resolve: {
     alias: {
